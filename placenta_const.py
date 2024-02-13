@@ -21,7 +21,7 @@ placenta_volume = 428e3 / char_length**3 #mm^3
 placentone_radius = 40.0/(2.0*char_length)
 placentone_wall_thickness = 2.0 / char_length
 
-placentone_removal_height = 16.0 / char_length
+placentone_removal_height = 18.0 / char_length
 
 lobule_wall_thickness = placentone_wall_thickness/1.5
 lobule_removal_height = placentone_removal_height/2.0

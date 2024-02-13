@@ -226,20 +226,39 @@ class Cavity:
     
 class NodeSet:
     
-    def __init__(self,dim) -> None:
+    def __init__(self,dim,v_type) -> None:
         self.dim = dim
+        
+        self.v_type = v_type
         
         self.no_nodes = None
         self.node = None
 
+        self.no_cell_nodes = None
         self.cell_nodes = None
         
-        self.node_height = None
+        # Note this is the 'absolute' height, in actuality a scaling is done s.t.
+        # pt_height = abs_wall_height*(1-actual_z_inside_placenta/placenta_height)
+        self.abs_wall_height = None
+        # This is the relative height, i.e. height above bottom surface
+        self.rel_wall_height = None
+        # This is the actual z value of the wall - buttom_surf_z + rel_wall_height
+        self.nodal_wall_height = None
         
     def print_members(self) -> None:
         for i in range(0,self.no_nodes):
             print(f"Vertex {i} = \
-                {numpy.array2string(self.node[i,:], separator=',')}")  
+                {numpy.array2string(self.node[i,:], separator=',')}")
+            
+            if (self.abs_wall_height is not None):
+                print(f"Vertex_abs_wall_height{i} = \
+                    {self.abs_wall_height[i]}")
+            if (self.rel_wall_height is not None):
+                print(f"Vertex_rel_wall_height{i} = \
+                    {self.rel_wall_height[i]}")
+            if (self.nodal_wall_height is not None):
+                print(f"Vertex_nodal_wall_height{i} = \
+                    {self.nodal_wall_height[i]}")
         
     def set_node(self,node_no,node) -> None:
         
@@ -252,29 +271,43 @@ class NodeSet:
             
         return None
 
-    def __create_height_storage(self) -> None:
+    def __create_abs_wall_height_storage(self) -> None:
 
-        if (self.node_height is None):
-            self.node_height = numpy.empty(self.no_nodes)
+        if (self.abs_wall_height is None):
+            self.abs_wall_height = numpy.empty(self.no_nodes)
+        
+        return None
+    
+    def __create_rel_wall_height_storage(self) -> None:
+
+        if (self.rel_wall_height is None):
+            self.rel_wall_height = numpy.empty(self.no_nodes)
+        
+        return None
+    
+    def __create_nodal_wall_height_storage(self) -> None:
+
+        if (self.nodal_wall_height is None):
+            self.nodal_wall_height = numpy.empty(self.no_nodes)
         
         return None
     
     def set_all_random_heights(self,main,variance) -> None:
         
-        self.__create_height_storage()
+        self.__create_abs_wall_height_storage()
         
         for i in range(0,self.no_nodes):
             rand_sign = numpy.random.choice([-1,1])
             rand_real = main + \
                 rand_sign*numpy.random.rand()*variance
-            self.node_height[i] = rand_real
+            self.abs_wall_height[i] = rand_real
         
         return None
     
     def set_all_random_heights_radius_dependent(self, \
             inner_main,inner_variance,outer_main,outer_variance,radius):
         
-        self.__create_height_storage()
+        self.__create_abs_wall_height_storage()
         
         for i in range(0,self.no_nodes):
             
@@ -287,7 +320,7 @@ class NodeSet:
                 
             else:
                 
-                self.__set_pt_random_height( \
+                self.__set_pt_random_height_positive( \
                     i,outer_main,outer_variance)
         
         return None
@@ -295,7 +328,7 @@ class NodeSet:
     def set_all_random_heights_negative(self, \
             inner_main,inner_variance):
         
-        self.__create_height_storage()
+        self.__create_abs_wall_height_storage()
         
         for i in range(0,self.no_nodes):
             
@@ -304,31 +337,79 @@ class NodeSet:
                 
         return None
     
-    def set_node_heights(self, \
-            v_type, \
+    def set_abs_wall_heights(self, \
             inner_main,inner_variance, \
             outer_main,outer_variance,outer_cutoff) -> None:
         
-        self.__create_height_storage()
+        self.__create_abs_wall_height_storage()
         
-        if (v_type == 'lobule'):
-            self.set_all_random_heights_negative(inner_main,inner_variance)
-        elif (v_type == 'cotyledon'):
-            if (outer_main is None or \
-                    outer_variance is None or \
-                    outer_cutoff is None):
-                
-                print("ERROR: set_node_heights")
-                print(f"v_type == {v_type} but an argument is None")
-                sys.exit(-1)
-                
-            self.set_all_random_heights_radius_dependent( \
-                inner_main,inner_variance, \
-                outer_main,outer_variance,outer_cutoff)
-        else:
-            print("ERROR: set_node_heights")
-            print(f"Unrecognised v_type {v_type}")
+        if (outer_main is None or \
+                outer_variance is None or \
+                outer_cutoff is None):
+            print("ERROR: set_abs_wall_heights")
+            print(f"v_type == {self.v_type} but an argument is None")
             sys.exit(-1)
+    
+        self.set_all_random_heights_radius_dependent( \
+            inner_main,inner_variance, \
+            outer_main,outer_variance,outer_cutoff)
+        
+        # If cotyledon, set all random heights
+        # If lobule, set abs_wall_height to be the same as rel_wall_height
+        #   and then scale for consistency
+        if (self.v_type == 'cotyledon'):
+            True
+        elif (self.v_type == 'lobule'):
+            True#self.rescale_lobule_abs_heights_with_cutoff(outer_cutoff)
+        else:
+            print("ERROR: set_abs_wall_heights")
+            print(f"Unrecognised v_type {self.v_type}")
+            sys.exit(-1)
+            
+        return None
+    
+    def rescale_lobule_abs_heights_with_cutoff(self,outer_cutoff) -> None:
+        
+        for i in range(0,self.no_nodes):
+            
+            xy_pt = copy.deepcopy(self.node[i,:])
+            
+            if (circ_eval(*xy_pt) <= outer_cutoff**2):
+                self.abs_wall_height[i] = self.abs_wall_height[i]/ \
+                    fns.calc_sphere_interior_height_frac_at_xy(xy_pt)
+                        
+    
+    def set_rel_and_nodal_wall_heights_cutoff(self,cutoff) -> None:
+        
+        self.__create_rel_wall_height_storage()
+        self.__create_nodal_wall_height_storage()
+        
+        if (self.abs_wall_height is None):
+            print("ERROR: set_rel_wall_heights_cutoff")
+            print("abs_wall_height not initialised")
+            sys.exit(-1)
+            
+        if (self.v_type == 'cotyledon' or self.v_type == 'lobule'):
+        
+            for i in range(0,self.no_nodes):
+                
+                xy_pt = copy.deepcopy(self.node[i,:])
+                
+                if (circ_eval(*xy_pt) <= cutoff**2):
+                    self.rel_wall_height[i] = self.calc_rel_wall_height(i)
+                    self.nodal_wall_height[i] = \
+                        fns.calc_sphere_height_at_xy(xy_pt) + \
+                            self.rel_wall_height[i]
+                else:
+                    self.rel_wall_height[i] = self.abs_wall_height[i]
+                    self.nodal_wall_height[i] = self.rel_wall_height[i]
+            
+        #elif (self.v_type == 'lobule'):
+        #    
+        #    for i in range(0,self.no_nodes):
+        #        
+        #        self.rel_wall_height[i] = self.abs_wall_height[i]
+        #        self.nodal_wall_height[i] = self.rel_wall_height[i]
             
         return None
     
@@ -337,7 +418,7 @@ class NodeSet:
         rand_sign = numpy.random.choice([-1,1])
         rand_real = main + \
             rand_sign*numpy.random.rand()*variance
-        self.node_height[node_no] = rand_real
+        self.abs_wall_height[node_no] = rand_real
         
         return None
     
@@ -346,10 +427,51 @@ class NodeSet:
         
         rand_real = main + \
             -numpy.random.rand()*variance
-        self.node_height[node_no] = rand_real
+        self.abs_wall_height[node_no] = rand_real
         
         return None
     
+    # As above but variance can only be negative
+    def __set_pt_random_height_positive(self,node_no,main,variance) -> None:
+        
+        rand_real = main + \
+            numpy.random.rand()*variance
+        self.abs_wall_height[node_no] = rand_real
+        
+        return None
+    
+    # Relative in sense that considers height of spherical cap bottom plate
+    def calc_rel_wall_height(self,node_no) -> float:
+        
+        xy_pt = copy.deepcopy(self.node[node_no,:])
+        
+        rel_z = self.abs_wall_height[node_no]* \
+            fns.calc_sphere_interior_height_frac_at_xy(xy_pt)
+        
+        return rel_z
+    
+    # Relative in sense that considers height of spherical cap bottom plate
+    def calc_abs_wall_height(self,node_no) -> float:
+        
+        xy_pt = copy.deepcopy(self.node[node_no,:])
+        
+        rel_z = self.rel_wall_height[node_no]/ \
+            fns.calc_sphere_interior_height_frac_at_xy(xy_pt)
+        
+        return rel_z
+        
+    # Relative in sense that considers height of spherical cap bottom plate
+    def calc_rel_wall_height_with_cutoff(self,node_no,cutoff_r) -> float:
+        
+        xy_pt = copy.deepcopy(self.node[node_no,:])
+            
+        if (circ_eval(*xy_pt) >= cutoff_r**2):
+            rel_z = self.abs_wall_height[node_no]
+        else:
+            rel_z = self.abs_wall_height[node_no]* \
+                fns.calc_sphere_interior_height_frac_at_xy(xy_pt)
+        
+        return rel_z
     
     def __set_cell_global_node_nos(self,placentone_obj) -> None:
         
@@ -357,6 +479,7 @@ class NodeSet:
         max_no_nodes = fns.determine_max_nodes_from_cotyledons(placentone_obj)
         
         # Add member which holds global vertex numbers in each cell
+        self.no_cell_nodes = numpy.empty(len(placentone_obj),dtype = int)
         self.cell_nodes = numpy.empty((len(placentone_obj),max_no_nodes),dtype = int)
         self.cell_nodes[:,:] = -1
         
@@ -365,6 +488,8 @@ class NodeSet:
             [no_vertices,no_edges,vertices,edges] = \
                 cell.get_vertices_edges()
                 
+            self.no_cell_nodes[cell_no] = no_vertices
+            
             for cell_v_no in range(0,cell.no_vertices):
                 
                 cell_pt = copy.deepcopy(cell.vertices[cell_v_no,:])
@@ -379,7 +504,46 @@ class NodeSet:
                         self.cell_nodes[cell_no,cell_v_no] = global_v_no
                         break
                     
-                    
+    def calc_cell_min_node_height_within_cutoff(self,cell_no,cutoff_r) -> float:
+        
+        if (self.no_cell_nodes is None or self.cell_nodes is None):
+            print("ERROR: calc_cell_min_node_height_within_cutoff")
+            print("no_cell_nodes or cell_nodes not initialised")
+            sys.exit(-1)
+            
+        min_height = 1.0e8
+        
+        for i in range(0,self.no_cell_nodes[cell_no]):
+            
+            glob_v_no = self.cell_nodes[cell_no,i]
+            xy_pt = self.node[glob_v_no,:]
+            
+            if (circ_eval(*xy_pt) <= cutoff_r**2):
+                if (self.rel_wall_height[glob_v_no] < min_height):
+                    min_height = self.rel_wall_height[glob_v_no]
+                
+        return min_height
+    
+    def calc_cell_min_node_height_outside_cutoff(self,cell_no,cutoff_r) -> float:
+        
+        if (self.no_cell_nodes is None or self.cell_nodes is None):
+            print("ERROR: calc_cell_min_node_height_outside_cutoff")
+            print("no_cell_nodes or cell_nodes not initialised")
+            sys.exit(-1)
+            
+        min_height = 1.0e8
+        
+        for i in range(0,self.no_cell_nodes[cell_no]):
+            
+            glob_v_no = self.cell_nodes[cell_no,i]
+            xy_pt = self.node[glob_v_no,:]
+            
+            if (circ_eval(*xy_pt) >= cutoff_r**2):
+                if (self.rel_wall_height[glob_v_no] < min_height):
+                    min_height = self.rel_wall_height[glob_v_no]
+                
+        return min_height
+            
     def set_from_placentone_obj(self,placentone_obj) -> None:
         
         no_global_vertices = 0
@@ -433,6 +597,12 @@ class EdgeSet:
         self.edge_length = None
         self.edge_dir = None
         
+        self.transition_percent = None
+        self.transition_point = None
+        
+        self.no_cell_edges = None
+        self.cell_edges = None
+        
     def print_members(self):
         print(f"No edges: {self.no_edges}")
         for i in range(0,self.no_edges):
@@ -476,20 +646,20 @@ class EdgeSet:
         self.edge_length[edge_no] = numpy.linalg.norm(self.edge_dir[edge_no,:])
         self.edge_dir[edge_no,:] = self.edge_dir[edge_no,:] / self.edge_length[edge_no]
     
-    def set_transition_percent(self,per) -> None:
-        
-        self.trans_per = per
-        
-        return None
-    
     def set_transition_points_percent(self,per) -> None:
         
-        self.transition_percent = per
+        self.transition_percent = numpy.empty(self.no_edges)
         self.transition_point = numpy.empty((self.no_edges,2,self.dim))
         
         n_set = self.node_set
         
         for edge_no in range(0,self.no_edges):
+            
+            # This is a hack, but it's a quick fix for small edges
+            if (self.edge_length[edge_no] < 1.0):
+                self.transition_percent[edge_no] = 0.4
+            else:
+                self.transition_percent[edge_no] = per
             
             v0 = copy.deepcopy(n_set.node[self.edge[edge_no,0],:])
             v1 = copy.deepcopy(n_set.node[self.edge[edge_no,1],:])
@@ -497,9 +667,9 @@ class EdgeSet:
             edge_dir = copy.deepcopy(self.edge_dir[edge_no,:])
             
             v0_trans = v0 + \
-                self.transition_percent * self.edge_length[edge_no] * edge_dir
+                self.transition_percent[edge_no] * self.edge_length[edge_no] * edge_dir
             v1_trans = v1 - \
-                self.transition_percent * self.edge_length[edge_no] * edge_dir
+                self.transition_percent[edge_no] * self.edge_length[edge_no] * edge_dir
                 
             self.transition_point[edge_no,0,:] = v0_trans
             self.transition_point[edge_no,1,:] = v1_trans
@@ -509,6 +679,100 @@ class EdgeSet:
     def set_edge_ele_adjacencies(self):
         
         return None
+    
+    def calc_pt_along_edge(self,edge_no,ratio) -> float:
+        
+        start_node = copy.deepcopy(self.node_set.node[self.edge[edge_no,0],:])
+            
+        xy_pt = start_node + \
+            self.edge_length[edge_no] * self.edge_dir[edge_no,:] * ratio
+        
+        return xy_pt
+    
+    def calc_rel_height_along_edge(self,edge_no,ratio) -> None:
+        
+        n_set = self.node_set
+        
+        if (n_set.nodal_wall_height is None):
+            print("ERROR: calc_rel_height_along_edge")
+            print(f"Node set's nodal_wall_height is None")
+            sys.exit(-1)
+        elif (ratio < 0.0 or ratio > 1.0):
+            print("ERROR: calc_rel_height_along_edge")
+            print(f"0 <= ratio <= 1")
+            sys.exit(-1)
+            
+        node_height = copy.deepcopy(n_set.nodal_wall_height[self.edge[edge_no,:]])
+        
+        xy_pt = self.calc_pt_along_edge(edge_no,ratio)
+        
+        if (self.transition_percent is not None):
+            
+            if (ratio < self.transition_percent[edge_no]):  
+                
+                return (node_height[0] - fns.calc_sphere_height_at_xy(xy_pt))
+            
+            elif (ratio > 1.0 - self.transition_percent[edge_no]):
+                
+                return (node_height[1] - fns.calc_sphere_height_at_xy(xy_pt))
+            
+            else:
+                
+                interim_ratio = ratio - self.transition_percent[edge_no]
+                scaled_ratio = interim_ratio/(1.0 - 2.0 * self.transition_percent[edge_no])
+                interim_node_height = \
+                    (1.0 - scaled_ratio) * node_height[0] + scaled_ratio * node_height[1]
+                return (interim_node_height - fns.calc_sphere_height_at_xy(xy_pt))
+            
+        else:
+        
+            interim_node_height = \
+                ratio * node_height[0] + (1.0 - ratio) * node_height[1]
+            return (interim_node_height - fns.calc_sphere_height_at_xy(xy_pt))
+        
+    def __set_cell_global_edge_nos(self,placentone_obj) -> None:
+        
+        # Work out the maximum number of edges per cotyledon
+        max_no_edge = fns.determine_max_edges_from_cotyledons(placentone_obj)
+        
+        # Add member which holds global vertex numbers in each cell
+        self.no_cell_edges = numpy.empty(len(placentone_obj),dtype = int)
+        self.cell_edges = numpy.empty((len(placentone_obj),max_no_edge),dtype = int)
+        self.cell_edges[:,:] = -1
+        
+        for cell_no,cell in enumerate(placentone_obj):
+            
+            [no_vertices,no_edges,vertices,edges] = \
+                cell.get_vertices_edges()
+                
+            self.no_cell_edges[cell_no] = no_edges
+            
+            for cell_e_no in range(0,cell.no_edges):
+                
+                cell_edge_pt = numpy.empty((2,self.dim))
+                cell_v_no = copy.deepcopy(cell.edges[cell_e_no,:])
+                for i in range(0,2):
+                    cell_edge_pt[i,:] = copy.deepcopy(cell.vertices[cell_v_no[i],:])
+                
+                for glob_e_no in range(0,self.no_edges):
+                
+                    glob_edge_pt = numpy.empty((2,self.dim))
+                    glob_v_no = copy.deepcopy(self.edge[glob_e_no,:])
+                    for i in range(0,2):
+                        glob_edge_pt[i,:] = copy.deepcopy(self.node_set.node[glob_v_no[i],:])
+                    
+                    if (fns.points_near( \
+                            cell_edge_pt[0,:],glob_edge_pt[0,:]) and \
+                            fns.points_near( \
+                            cell_edge_pt[1,:],glob_edge_pt[1,:]) or \
+                        fns.points_near( \
+                            cell_edge_pt[0,:],glob_edge_pt[1,:]) and \
+                            fns.points_near( \
+                            cell_edge_pt[1,:],glob_edge_pt[0,:])):
+                        
+                        self.cell_edges[cell_no,cell_e_no] = glob_e_no
+                        break
+        
         
     def set_from_placentone_obj(self,placentone_obj):
         
@@ -583,9 +847,31 @@ class EdgeSet:
         self.no_edges = no_global_edges
         self.edge = numpy.empty((self.no_edges,2),dtype = int)
         self.edge_dir = numpy.empty((self.no_edges,2))
-        self.edge_length = numpy.empty((self.no_edges,2))
+        self.edge_length = numpy.empty(self.no_edges)
         for count,global_e in enumerate(global_edges):
             self.set_edge(count,global_e)
             self.update_edge_properties(count)
-                   
-                
+            
+        self.__set_cell_global_edge_nos(placentone_obj) 
+        
+    def get_vertices_from_cell_edge(self,cell_no,cell_e_no):
+        
+        if (self.no_cell_edges is None or self.cell_edges is None):
+            print("ERROR: get_vertices_from_cell_edge")
+            print("no_cell_edges or cell_edges not initialised")
+            sys.exit(-1)
+        
+        glob_e_no = copy.deepcopy(self.cell_edges[cell_no,cell_e_no])
+        
+        v_no = copy.deepcopy(self.edge[glob_e_no,:])
+        vertex_1 = copy.deepcopy(self.node_set.node[v_no[0],:])
+        vertex_2 = copy.deepcopy(self.node_set.node[v_no[1],:])
+        
+        return [vertex_1,vertex_2]
+    
+    def calc_edge_vertex_circle_intersection(self,edge_no,shift) -> None:
+        
+        self.edge[edge_no,:] = self.edge[edge_no,:] + shift
+        
+        return None
+    

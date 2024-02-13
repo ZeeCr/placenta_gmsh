@@ -26,8 +26,8 @@ importlib.reload(frni)
 from placenta_const import *
 
 
-def add_spiral_arteries_and_lobule_veins(model,no_lobules,lobules, \
-        cotyledons_shrunk,lobules_shrunk,no_inlets,no_lobule_veins,no_outlets,outlet_faces):
+def add_spiral_arteries_and_lobule_veins(model,no_lobules, \
+        cotyledons,lobules,no_inlets,no_lobule_veins,no_outlets,outlet_faces):
     
     no_cavities = 0
     bounding_box = clses.BoundingBox()
@@ -57,9 +57,8 @@ def add_spiral_arteries_and_lobule_veins(model,no_lobules,lobules, \
 
         placentone_pt_on_circle = numpy.zeros(3)
         placentone_pt_on_circle[0:2] = lobules[placentone_no].centroid
-        placentone_pt_on_circle[2] = initial_sphere_radius \
-        - math.sqrt(initial_sphere_radius**2 - (placentone_pt_on_circle[0]**2 + placentone_pt_on_circle[1]**2))
-
+        placentone_pt_on_circle[2] = sphere_surface_eval( \
+            *placentone_pt_on_circle[0:2],initial_sphere_radius,0.0)
         # Circle centre is the original huge sphere used to create the placenta, i.e.
         # this is the outward normal vector to the placenta's surface
         placenta_normal_vector = numpy.array([placentone_pt_on_circle[0]-0.0, \
@@ -97,11 +96,12 @@ def add_spiral_arteries_and_lobule_veins(model,no_lobules,lobules, \
                                    septal_artery_radius,curr_volume)
         '''
         
-        model.occ.addCylinder(artery_pt_out_placenta[0],artery_pt_out_placenta[1],artery_pt_out_placenta[2], \
-                                   -cyl_dist*placenta_normal_vector[0], \
-                                   -cyl_dist*placenta_normal_vector[1], \
-                                   -cyl_dist*placenta_normal_vector[2], \
-                                   septal_artery_radius,curr_volume)
+        model.occ.addCylinder( \
+            artery_pt_out_placenta[0],artery_pt_out_placenta[1],artery_pt_out_placenta[2], \
+            -cyl_dist*placenta_normal_vector[0], \
+            -cyl_dist*placenta_normal_vector[1], \
+            -cyl_dist*placenta_normal_vector[2], \
+            septal_artery_radius,curr_volume)
         cyl_face = model.occ.getMaxTag(2)
         bb = model.occ.getBoundingBox(2,cyl_face)
 
@@ -118,7 +118,9 @@ def add_spiral_arteries_and_lobule_veins(model,no_lobules,lobules, \
             fns.check_unique_vol(model)
             
             max_vol_tag = model.occ.getMaxTag(3)
-            gmsh.model.occ.fillet([max_vol_tag], [fns.find_line_with_centre(model,artery_pt_on_placenta)], [septal_artery_funnel_radius])
+            gmsh.model.occ.fillet([max_vol_tag], \
+                [fns.find_line_with_centre(model,artery_pt_on_placenta)], \
+                [septal_artery_funnel_radius])
 
             # Incrememnt inlet
             no_inlets = no_inlets+1
@@ -164,8 +166,10 @@ def add_spiral_arteries_and_lobule_veins(model,no_lobules,lobules, \
         print(f"vein_power: {vein_power}")
         
         # Store then print out at the end
-        to_store_stop_at_basal_veins_added = numpy.append(to_store_stop_at_basal_veins_added,stop_at_veins_added)
-        to_store_no_vein_to_add = numpy.append(to_store_no_vein_to_add,no_vein_to_add)
+        to_store_stop_at_basal_veins_added = \
+            numpy.append(to_store_stop_at_basal_veins_added,stop_at_veins_added)
+        to_store_no_vein_to_add = \
+            numpy.append(to_store_no_vein_to_add,no_vein_to_add)
         to_store_vein_power = numpy.append(to_store_vein_power,vein_power)
         
         #####################
@@ -175,7 +179,8 @@ def add_spiral_arteries_and_lobule_veins(model,no_lobules,lobules, \
         for vein_no in range(1,no_vein_to_add+1,1):
             vein_side = (-1)**(vein_no+vein_power)
             vein_pt_on_placenta = copy.deepcopy(artery_pt_on_placenta)
-            vein_pt_on_placenta[0:2] = vein_pt_on_placenta[0:2]+vein_side*septal_vessel_separation*placenta_tangent[0:2]
+            vein_pt_on_placenta[0:2] = vein_pt_on_placenta[0:2] + \
+                vein_side*septal_vessel_separation*placenta_tangent[0:2]
 
             # Circle centre is the original huge sphere used to create the placenta, i.e.
             # this is the outward normal vector to the placenta's surface
@@ -206,14 +211,14 @@ def add_spiral_arteries_and_lobule_veins(model,no_lobules,lobules, \
             front_est = vein_inside_pt+(septal_vein_radius+septal_vein_funnel_radius)*placenta_tangent_3d
             left_est = vein_inside_pt+(septal_vein_radius+septal_vein_funnel_radius)*placenta_normal_3d
             right_est = vein_inside_pt-(septal_vein_radius+septal_vein_funnel_radius)*placenta_normal_3d
-            lobule_nos[0] = fns.find_lobule_no(front_est,lobules_shrunk)
-            lobule_nos[1] = fns.find_lobule_no(vein_inside_pt,lobules_shrunk)
-            lobule_nos[2] = fns.find_lobule_no(left_est,lobules_shrunk)
-            lobule_nos[3] = fns.find_lobule_no(right_est,lobules_shrunk)
-            cotyledon_nos[0] = fns.find_cotyledon_no(front_est,cotyledons_shrunk)
-            cotyledon_nos[1] = fns.find_cotyledon_no(vein_inside_pt,cotyledons_shrunk)
-            cotyledon_nos[2] = fns.find_cotyledon_no(left_est,cotyledons_shrunk)
-            cotyledon_nos[3] = fns.find_lobule_no(right_est,cotyledons_shrunk)
+            lobule_nos[0] = fns.find_lobule_no(front_est,lobules)
+            lobule_nos[1] = fns.find_lobule_no(vein_inside_pt,lobules)
+            lobule_nos[2] = fns.find_lobule_no(left_est,lobules)
+            lobule_nos[3] = fns.find_lobule_no(right_est,lobules)
+            cotyledon_nos[0] = fns.find_cotyledon_no(front_est,cotyledons)
+            cotyledon_nos[1] = fns.find_cotyledon_no(vein_inside_pt,cotyledons)
+            cotyledon_nos[2] = fns.find_cotyledon_no(left_est,cotyledons)
+            cotyledon_nos[3] = fns.find_cotyledon_no(right_est,cotyledons)
 
             # All points in same lobule so can create cyl
             if (lobule_nos[0] != -1 and cotyledon_nos[0] != -1 \
@@ -283,7 +288,7 @@ def add_spiral_arteries_and_lobule_veins(model,no_lobules,lobules, \
 ##################################################################
 ############## MARGINAL SINUS VEINS (BORDER VEINS) ###############
 ##################################################################  
-def create_marginal_veins(model,cotyledons_shrunk,lobules_shrunk,no_outlets,outlet_faces):
+def create_marginal_veins(model,cotyledons,lobules,no_outlets,outlet_faces):
     
     face = clses.Face()
     marginal_sinus_vein_offset_shifted = marginal_sinus_vein_offset
@@ -356,12 +361,12 @@ def create_marginal_veins(model,cotyledons_shrunk,lobules_shrunk,no_outlets,outl
         lobule_nos = numpy.empty(3,dtype=int)
         left_est = cylinder_inside_pt-1.2*(marginal_sinus_vein_radius+marginal_fillet_radius)*vein_tangent
         right_est = cylinder_inside_pt+1.2*(marginal_sinus_vein_radius+marginal_fillet_radius)*vein_tangent
-        lobule_nos[0] = fns.find_lobule_no(left_est,lobules_shrunk)
-        lobule_nos[1] = fns.find_lobule_no(cylinder_inside_pt,lobules_shrunk)
-        lobule_nos[2] = fns.find_lobule_no(right_est,lobules_shrunk)
-        cotyledon_nos[0] = fns.find_cotyledon_no(left_est,cotyledons_shrunk)
-        cotyledon_nos[1] = fns.find_cotyledon_no(cylinder_inside_pt,cotyledons_shrunk)
-        cotyledon_nos[2] = fns.find_cotyledon_no(right_est,cotyledons_shrunk)
+        lobule_nos[0] = fns.find_lobule_no(left_est,lobules)
+        lobule_nos[1] = fns.find_lobule_no(cylinder_inside_pt,lobules)
+        lobule_nos[2] = fns.find_lobule_no(right_est,lobules)
+        cotyledon_nos[0] = fns.find_cotyledon_no(left_est,cotyledons)
+        cotyledon_nos[1] = fns.find_cotyledon_no(cylinder_inside_pt,cotyledons)
+        cotyledon_nos[2] = fns.find_cotyledon_no(right_est,cotyledons)
         
         near_artery_or_vein = False
         artery_cavity_clearance = marginal_sinus_vein_radius+septal_artery_radius+marginal_fillet_radius+cavity_minor_axis
@@ -372,7 +377,7 @@ def create_marginal_veins(model,cotyledons_shrunk,lobules_shrunk,no_outlets,outl
                 if (numpy.linalg.norm(cylinder_inside_pt[0:2]-face_inside_pt[0:2]) < vein_clearance):
                     near_artery_or_vein = True
         # Check cylinders won't overlap
-        if (numpy.linalg.norm(cylinder_inside_pt[0:2]-lobules_shrunk[lobule_nos[0]].centroid[0:2]) < \
+        if (numpy.linalg.norm(cylinder_inside_pt[0:2]-lobules[lobule_nos[0]].centroid[0:2]) < \
                 artery_cavity_clearance):
             near_artery_or_vein = True
         
@@ -451,3 +456,252 @@ def create_marginal_veins(model,cotyledons_shrunk,lobules_shrunk,no_outlets,outl
             debug_counter = debug_counter+1
     
     return [model,no_marginal_sinus_veins_added,no_outlets,outlet_faces]
+
+def create_septal_veins(model,no_cotyledon,cotyledons, \
+        c_edge_set,no_outlets,outlet_faces):
+        
+    face = clses.Face()
+    
+    no_septal_wall_veins = 0
+    
+    vein_length_buffer = placentone_wall_thickness/100.0 # Ensure two opposite placed veins don't overlap
+    length = placentone_wall_thickness/2.0 - vein_length_buffer
+    
+    if (not(fixed_septal_wall_veins)):
+
+        for cotyledon_no in range(0,no_cotyledon):
+
+            print("Adding septal wall vein to placentone ",cotyledon_no)
+            
+            curr_vol = model.occ.getMaxTag(3)+1
+
+            placentone_to_do = cotyledons[cotyledon_no]
+
+            min_edge_length = 4.0*septal_vein_radius
+            min_edge_length = 1.5*min_edge_length
+
+            # Count how many edges lie in placenta
+            no_edges_in_placenta = 0
+            edges_in_placenta = []
+            for loc_edge_no in range(0,c_edge_set.no_cell_edges[cotyledon_no]):
+                
+                glob_edge_no = c_edge_set.cell_edges[cotyledon_no,loc_edge_no]
+                
+                [vertex1,vertex2] = \
+                    c_edge_set.get_vertices_from_cell_edge(cotyledon_no,loc_edge_no)
+                
+                vertex1_dist = circ_eval(*vertex1[0:2])
+                vertex2_dist = circ_eval(*vertex2[0:2])
+                
+                # Check if both points aren't in due to limitations of readjust_v function
+                if (not(vertex1_dist >= placenta_radius**2 and vertex2_dist >= placenta_radius**2)):
+                
+                    [vertex1,vertex2] = fns.readjust_vertices_for_wall_veins( \
+                        cotyledon_no,vertex1,vertex2,placenta_radius, \
+                        glob_edge_no,c_edge_set)
+                    
+                    edge_dir = numpy.copy(vertex2-vertex1)
+                    edge_length = numpy.linalg.norm(edge_dir)
+
+                    if (edge_length > min_edge_length):
+                        
+                        no_edges_in_placenta = no_edges_in_placenta+1
+                        edges_in_placenta.append(loc_edge_no)
+                    
+            if (no_edges_in_placenta > 0):
+                
+                edges_in_placenta = numpy.array(edges_in_placenta)
+                
+                # end_pt is in wall
+                face_cyl_pt = numpy.array([0.0,0.0,0.0])
+                face_cyl_end_pt = numpy.array([0.0,0.0,0.0])
+                
+                # Randomly pick which wall to place the vein on, how far along and height
+                loc_edge_no = numpy.random.randint(0,no_edges_in_placenta)
+                loc_edge_no = edges_in_placenta[loc_edge_no]
+                glob_edge_no = c_edge_set.cell_edges[cotyledon_no,loc_edge_no]
+                
+                edge_ratio = numpy.random.random()
+                # Hack to stop point being too close to edge
+                while (edge_ratio < 0.1):
+                    edge_ratio = numpy.random.random()
+                    
+                # Either fix height ratio or choose randomly
+                if (adjust_stored_septal_vein_height):
+                    height_ratio = adjust_septal_height_ratio
+                else:
+                    height_ratio = numpy.random.random()
+
+                [vertex1,vertex2] = \
+                    c_edge_set.get_vertices_from_cell_edge(cotyledon_no,loc_edge_no)
+                
+                edge_dir = numpy.copy(vertex2-vertex1)
+                edge_length = numpy.linalg.norm(numpy.copy(vertex2-vertex1))
+                
+                vertex1_dist = circ_eval(*vertex1[0:2])
+                vertex2_dist = circ_eval(*vertex2[0:2])
+                
+                [shift_vertex1,shift_vertex2] = fns.readjust_vertices_for_wall_veins( \
+                    cotyledon_no,vertex1,vertex2,placenta_radius, \
+                    glob_edge_no,c_edge_set)
+
+                shift_edge_length = numpy.linalg.norm(numpy.copy(shift_vertex2-shift_vertex1))
+                
+                # Edge ratio acts upon the readjusted vertices, hence this converts to original edge
+                if (vertex1_dist >= placenta_radius**2):
+                    shift_edge_ratio = 1.0 - (shift_edge_length/edge_length)*(1.0-edge_ratio)
+                elif (vertex2_dist >= placenta_radius**2):
+                    shift_edge_ratio = edge_ratio*(shift_edge_length/edge_length)
+                else:
+                    shift_edge_ratio = edge_ratio
+                
+                # Create vein centroid
+                face_cyl_end_pt[0:2] = c_edge_set.calc_pt_along_edge( \
+                    glob_edge_no,shift_edge_ratio)
+                
+                rel_hgt = c_edge_set.calc_rel_height_along_edge( \
+                    glob_edge_no,shift_edge_ratio)
+                
+                # Oriented out of Voronoi cell
+                norm_dir = numpy.array([-edge_dir[1],edge_dir[0]])
+                # Flip normal if centroid is in direction of norm_dir
+                if (norm_dir[0]*(placentone_to_do.centroid[0] - face_cyl_end_pt[0]) \
+                        + norm_dir[1]*(placentone_to_do.centroid[1] - face_cyl_end_pt[1]) > 0):
+                    norm_dir = -norm_dir
+                norm_dir = fns.normalise_vector(2,norm_dir)
+                
+                # Shift point slightly outward to avoid overlap on adjacent vein
+                face_cyl_end_pt[0:2] = face_cyl_end_pt[0:2] - vein_length_buffer*norm_dir[0:2]
+                
+                face_cyl_pt[0:2] = copy.deepcopy(face_cyl_end_pt[0:2]) - length*norm_dir[0:2]
+
+                Z_pt = fns.calc_septal_vein_height( \
+                    rel_hgt,face_cyl_pt[0:2], \
+                    face_cyl_end_pt[0:2],height_ratio)
+                
+                face_cyl_pt[2] = Z_pt
+                face_cyl_end_pt[2] = Z_pt
+
+                if (face_cyl_pt[2]+septal_vein_radius < placenta_height):
+                    
+                    cyl_radius = septal_artery_radius
+                    
+                    model.occ.addCylinder(*face_cyl_pt, \
+                                        *(face_cyl_end_pt-face_cyl_pt), \
+                                        cyl_radius,curr_vol)
+                    
+                    cyl_face = model.occ.getMaxTag(2)
+
+                    model.occ.fuse([(3,1)],[(3,curr_vol)])       
+
+                    try:
+                        # An occasional error means that the centroid is outside the placental domain
+                        fns.check_unique_vol(model)
+                        max_vol_tag = model.occ.getMaxTag(3)
+                        try:
+                            model.occ.fillet([max_vol_tag], [fns.find_line_with_centre(model,face_cyl_pt)], [fillet_radius])
+                        except:
+                            print(f"Error in filleting septal wall vein")
+                            model.occ.synchronize()
+                            gmsh.fltk.run()
+                            gmsh.finalize()
+                            sys.exit(-1)
+
+                        # Incrememnt outlet
+                        no_outlets = no_outlets+1
+                        no_septal_wall_veins = no_septal_wall_veins + 1
+
+                        face.update_face(cyl_face,face_cyl_end_pt,numpy.array([norm_dir[0],norm_dir[1],0.0]))
+                        face.update_generating_cylinder_info(cylinder_radius=cyl_radius, \
+                                                                cylinder_centre=face_cyl_end_pt, \
+                                                                cylinder_length=length, \
+                                                                cylinder_fillet=fillet_radius)
+                        
+                        outlet_faces.append(copy.deepcopy(face))
+                        
+                        print(f"Added septal wall")
+                        print(f"face no: {outlet_faces[-1].face_no}")
+                        print(f"pt in wall: [{outlet_faces[-1].centre[0]},{outlet_faces[-1].centre[1]},{outlet_faces[-1].centre[2]}]")
+                        print(f"norm out cell: [{outlet_faces[-1].outward_unit_normal[0]},{outlet_faces[-1].outward_unit_normal[1]},{outlet_faces[-1].outward_unit_normal[2]}]")
+
+                    except Exception:
+
+                        print(f"Error setting up septal wall vessel")
+                        model.occ.remove([(3,curr_vol)], recursive=True)
+
+
+        print(f"No. septall wall veins: {no_septal_wall_veins}")
+
+        print(f"face_nos")
+        for i in range(no_outlets-no_septal_wall_veins,no_outlets):
+            print(f"{outlet_faces[i].face_no},")
+
+        print(f"pts,")
+        for i in range(no_outlets-no_septal_wall_veins,no_outlets):
+            face_cyl_pt = numpy.copy(outlet_faces[i].centre)
+            print(f"[{face_cyl_pt[0]},{face_cyl_pt[1]},{face_cyl_pt[2]}],")
+
+        print(f"norms,")
+        for i in range(no_outlets-no_septal_wall_veins,no_outlets):
+            face_norm = numpy.copy(outlet_faces[i].outward_unit_normal)
+            print(f"[{face_norm[0]},{face_norm[1]},{face_norm[2]}],")    
+            
+    else:
+
+        for v_no in range(0,no_stored_septal_wall_veins):
+            
+            print(f"Retrieving stored septal wall vein {v_no}")
+            
+            curr_vol = model.occ.getMaxTag(3)+1
+            
+            cyl_face = septal_vein_face_nos[v_no]
+            face_cyl_end_pt = septal_veins_pts[v_no]
+            norm_dir = septal_veins_norms[v_no]
+            length = vein_length
+            
+            face_pt_on_placenta = copy.deepcopy(face_cyl_end_pt)
+            face_pt_on_placenta[0:2] = face_cyl_end_pt[0:2] - length*norm_dir[0:2]
+            
+            if (adjust_stored_septal_vein_height):
+                face_pt_on_placenta[2] = fns.calc_septal_vein_height( \
+                    face_pt_on_placenta[0:2],face_cyl_end_pt[0:2],adjust_septal_height_ratio)
+                face_cyl_end_pt[2] = face_pt_on_placenta[2]
+            
+            cyl_radius = septal_vein_radius
+            
+            face.update_face(cyl_face,face_cyl_end_pt,numpy.array([norm_dir[0],norm_dir[1],0.0]))
+            face.update_generating_cylinder_info(cylinder_radius=cyl_radius, \
+                                                    cylinder_centre=face_cyl_end_pt, \
+                                                    cylinder_length=length, \
+                                                    cylinder_fillet=septal_vein_funnel_radius)
+
+            outlet_faces.append(copy.deepcopy(face))
+            
+            try:
+                
+                model.occ.addCylinder(*face_cyl_end_pt, \
+                                        *(-(1.0+cyl_offset_length)*length*norm_dir), \
+                                        cyl_radius,curr_vol)
+
+                model.occ.fuse([(3,1)],[(3,curr_vol)])
+
+                max_vol_tag = model.occ.getMaxTag(3)
+                model.occ.fillet([max_vol_tag], [fns.find_line_with_centre(model,face_pt_on_placenta)], [septal_vein_funnel_radius])
+
+                no_outlets = no_outlets + 1
+                no_septal_wall_veins = no_septal_wall_veins + 1
+            
+            except:
+                print(f"Hit failsafe when loading septal wall veins")
+                model.occ.synchronize()
+                gmsh.fltk.run()
+                gmsh.finalize()
+                sys.exit(-1)
+                
+        
+        
+        
+        
+    
+    
+    return [no_septal_wall_veins,no_outlets,outlet_faces]

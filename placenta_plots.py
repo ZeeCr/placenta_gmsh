@@ -1,5 +1,6 @@
 import math
 import importlib
+import copy
 
 import numpy
 
@@ -80,5 +81,74 @@ def plot_placentone_list(points,placentone_list):
     
     
     
+    
+    return None
+
+def plot_edge_set(edge_set,placentone_list = None):
+
+    shift = placenta_voronoi_outer_radius_offset
+    fig = plt.figure()
+    ax = fig.add_axes([1,1,2,2], aspect=1)
+    ax.set_xlim(-placenta_radius-shift,placenta_radius+shift)
+    ax.set_ylim(-placenta_radius-shift,placenta_radius+shift)
+    
+    #ax.plot(0.0, 0.0, c='C0', lw=10, label="Blue signal", zorder=10)
+    #ax.plot(0.0, 1.0, c='C1', lw=10, label="Orange signal")
+    ax.plot([-placenta_radius,placenta_radius,placenta_radius,-placenta_radius,-placenta_radius], \
+            [-placenta_radius,-placenta_radius,placenta_radius,placenta_radius,-placenta_radius], zorder=2, color='black', linewidth=1, label="Orange signal")
+    c = matplotlib.patches.Circle((0.0, 0.0), radius=placenta_radius, clip_on=False, zorder=1, linewidth=1.0,
+               edgecolor='black', facecolor='none',
+               path_effects=[matplotlib.patheffects.withStroke(linewidth=5, foreground='white')])
+    ax.add_artist(c)    
+    
+    for edge_no in range(0,edge_set.no_edges):
+        
+        v_no = copy.deepcopy(edge_set.edge[edge_no,:])
+        vertices = numpy.empty((2,2))
+        vertices[0,:] = edge_set.node_set.node[v_no[0],:]
+        vertices[1,:] = edge_set.node_set.node[v_no[1],:]
+        
+        midp = 0.5*(vertices[1,:]+vertices[0,:])
+        
+        ax.text(*midp,str(edge_no), zorder=10,
+            ha='center', va='top', weight='bold', color='g',
+            fontfamily='Courier New',fontsize=24)
+    
+        # Edge line
+        X = numpy.array([vertices[0,0],vertices[1,0]])
+        Y = numpy.array([vertices[0,1],vertices[1,1]])
+        ax.plot(X,Y,c='g',zorder=9)
+        
+        # Vector showing edge dir
+        vec_line = copy.deepcopy(vertices[0,:] + \
+            0.1*edge_set.edge_length[edge_no]*edge_set.edge_dir[edge_no,:])
+        X = numpy.array([vertices[0,0],vec_line[0]])
+        Y = numpy.array([vertices[0,1],vec_line[1]])
+        ax.plot(X,Y,c='r',zorder=9)
+        ax.text(*vec_line,str(edge_no), zorder=10,
+            ha='center', va='top', weight='bold', color='r',
+            fontfamily='Courier New',fontsize=24)
+        
+    if (placentone_list is not None):
+    
+        for cell_no in range(0,len(placentone_list)):
+            
+            for loc_e_no in range(0,edge_set.no_cell_edges[cell_no]):
+                
+                glob_e_no = edge_set.cell_edges[cell_no,loc_e_no]
+                [v0,v1] = edge_set.get_vertices_from_cell_edge(cell_no,loc_e_no)
+                midp = v0[:] + 0.33*(v1[:]-v0[:])
+                midp_c = copy.deepcopy(placentone_list[cell_no].centroid - midp)
+                midp_c = copy.deepcopy(midp + 0.1*midp_c)
+                
+                # Vector showing cell-wise labels
+                X = numpy.array([midp[0],midp_c[0]])
+                Y = numpy.array([midp[1],midp_c[1]])
+                ax.plot(X,Y,c='orange',zorder=9)
+                ax.text(*midp_c,str(loc_e_no)+", "+str(glob_e_no), zorder=10,
+                    ha='center', va='top', weight='bold', color='orange',
+                    fontfamily='Courier New',fontsize=16)
+            
+    plt.show()
     
     return None

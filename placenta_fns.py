@@ -723,9 +723,9 @@ def find_surf_no_with_COM_on_plane(model,plane_point,plane_normal):
     return surf_no_to_find
 
 
-def find_lobule_no(point,lobules_shrunk):
+def find_lobule_no(point,lobules):
     
-    for lobule_no,lobule in enumerate(lobules_shrunk):
+    for lobule_no,lobule in enumerate(lobules):
         
         no_edges = lobule.no_edges
         vertices = lobule.vertices
@@ -734,19 +734,24 @@ def find_lobule_no(point,lobules_shrunk):
         
         for edge_no in range(0,no_edges):
             
-            point_on_line = vertices[edges[edge_no,0]][0:2]
+            point_on_line = copy.deepcopy(vertices[edges[edge_no,0]][0:2])
+            end_point_on_line = copy.deepcopy(vertices[edges[edge_no,1]][0:2])
+            
             tangent = numpy.empty(2)
             normal = numpy.empty(2)
             
-            tangent[0:2] = vertices[edges[edge_no,1]][0:2]-point_on_line
+            tangent[0:2] = end_point_on_line - point_on_line
             normal[0:2] = [tangent[1],-tangent[0]]
             normal[0:2] = normalise_vector(2,normal)
             
             if (find_dist_from_plane(point_on_line,normal,lobule.centroid[0:2]) < 0):
-                print(f"WARN: find_lobule_no")
-                print(f"normal . centroid < 0, shouldn't happen")
-                print(f"Reversing normal sign")
+                logger.warn(f"WARN: find_lobule_no")
+                logger.warn(f"normal . centroid < 0, shouldn't happen")
+                logger.warn(f"Reversing normal sign")
                 normal = -normal
+                
+            point_on_line[0:2] = point_on_line[0:2] + \
+                normal[0:2] * lobule_wall_thickness/2.0
                 
             if (find_dist_from_plane(point_on_line,normal,point[0:2]) > 0):
                 edge_counter = edge_counter+1
@@ -756,9 +761,9 @@ def find_lobule_no(point,lobules_shrunk):
     
     return -1
 
-def find_cotyledon_no(point,cotyledons_shrunk):
+def find_cotyledon_no(point,cotyledons):
     
-    for cotyledon_no,cotyledon in enumerate(cotyledons_shrunk):
+    for cotyledon_no,cotyledon in enumerate(cotyledons):
         
         no_edges = cotyledon.no_edges
         vertices = cotyledon.vertices
@@ -767,19 +772,24 @@ def find_cotyledon_no(point,cotyledons_shrunk):
         
         for edge_no in range(0,no_edges):
             
-            point_on_line = vertices[edges[edge_no,0]][0:2]
+            point_on_line = copy.deepcopy(vertices[edges[edge_no,0]][0:2])
+            end_point_on_line = copy.deepcopy(vertices[edges[edge_no,1]][0:2])
+            
             tangent = numpy.empty(2)
             normal = numpy.empty(2)
             
-            tangent[0:2] = vertices[edges[edge_no,1]][0:2]-point_on_line
+            tangent[0:2] = end_point_on_line - point_on_line
             normal[0:2] = [tangent[1],-tangent[0]]
             normal[0:2] = normalise_vector(2,normal)
             
             if (find_dist_from_plane(point_on_line,normal,cotyledon.centroid[0:2]) < 0):
-                print(f"WARN: find_cotyledon_no")
-                print(f"normal . centroid < 0, shouldn't happen")
-                print(f"Reversing normal sign")
+                logger.warn(f"WARN: find_cotyledon_no")
+                logger.warn(f"normal . centroid < 0, shouldn't happen")
+                logger.warn(f"Reversing normal sign")
                 normal = -normal
+                
+            point_on_line[0:2] = point_on_line[0:2] + \
+                normal[0:2] * placentone_wall_thickness/2.0
                 
             if (find_dist_from_plane(point_on_line,normal,point[0:2]) > 0):
                 edge_counter = edge_counter+1
@@ -935,6 +945,18 @@ def determine_max_nodes_from_cotyledons(cotyledon_list):
             
     return max_no_nodes
 
+def determine_max_edges_from_cotyledons(cotyledon_list):
+    
+    max_no_edges = 0
+    
+    for cell in cotyledon_list:
+        
+        if (cell.no_edges > max_no_edges):
+            
+            max_no_edges = cell.no_edges
+            
+    return max_no_edges
+
 def determine_largest_gmsh_vol(model):
     
     volumes = model.occ.getEntities(dim=3)
@@ -966,7 +988,48 @@ def calc_septal_vein_xy(wall_pt_1,wall_pt_2,edge_dir,ratio):
 # Gets septal vein height using the two bounding spheres (lower placenta sphere, higher placentone removal sphere)
 # +/- buffer space of septal vein radius + 1.05*funnel_radius
 # Then ratio calculates linear comb. height between those two points
-def calc_septal_vein_height(cotyledon_no,xy_on_wall,xy_in_wall,ratio):
+def calc_septal_vein_height(rel_hgt,xy_on_wall,xy_in_wall,ratio):
+
+    sso = sphere_surface_eval(
+            *xy_on_wall,initial_sphere_radius,0.0)
+    ssi = sphere_surface_eval(
+            *xy_in_wall,initial_sphere_radius,0.0)
+
+    btm_hgt = max( \
+        sso + wall_vein_buffer_on_wall, \
+        ssi + wall_vein_buffer_in_wall)
+    top_hgt = min( \
+        rel_hgt + sso - wall_vein_buffer_on_wall, \
+        rel_hgt + ssi - wall_vein_buffer_in_wall)
+    
+    if (btm_hgt > top_hgt):
+        print(f"ERROR: calc_septal_vein_height")
+        print("btm_hgt > top_hgt")
+        print(f"btm_hgt = {btm_hgt}, top_hgt = {top_hgt}")
+        gmsh.model.occ.addPoint(*xy_on_wall,btm_hgt,meshSize=1.0)
+        gmsh.model.occ.addPoint(*xy_on_wall,top_hgt,meshSize=1.0)
+        gmsh.model.occ.synchronize()
+        gmsh.fltk.run()
+        gmsh.finalize()
+        sys.exit(-1)
+        
+    hgt = (1.0-ratio)*btm_hgt + ratio*top_hgt
+    
+    print(f"IN SEPTAL_VEIN_HEIGHT")
+    print(f"btm_hgt: {btm_hgt}")
+    print(f"top_hgt: {top_hgt}")
+    print(f"rel_hgt: {rel_hgt}")
+    print(f"hgt: {hgt}")
+    print(f"ratio: {ratio}")
+    print(f"wall_vein_buffer_on_wall: {wall_vein_buffer_on_wall}")
+    print(f"OUT SEPTAL_VEIN_HEIGHT")
+
+    return hgt
+
+# Gets septal vein height using the two bounding spheres (lower placenta sphere, higher placentone removal sphere)
+# +/- buffer space of septal vein radius + 1.05*funnel_radius
+# Then ratio calculates linear comb. height between those two points
+def calc_septal_vein_height_o(cotyledon_no,xy_on_wall,xy_in_wall,ratio):
 
     rsr_c = removal_sphere_radius(cotyledon_wall_heights[cotyledon_no])
     
@@ -1011,7 +1074,192 @@ def calc_septal_vein_height(cotyledon_no,xy_on_wall,xy_in_wall,ratio):
 
     return hgt
 
-def readjust_vertices_for_wall_veins(cotyledon_no,vertex1,vertex2,radius):
+def readjust_vertices_for_wall_veins(cotyledon_no, \
+        initial_vertex1,initial_vertex2,radius,edge_no,edge_set):
+
+    initial_length = edge_set.edge_length[edge_no]
+    
+    # Limitations of calculating rel_height outside radius
+    radius_w_buffer = 0.9*radius
+
+    wall_height = lambda ratio : \
+        edge_set.calc_rel_height_along_edge(edge_no,ratio)
+
+    if (circ_eval(*initial_vertex1) < radius**2 and \
+            circ_eval(*initial_vertex2) < radius**2):
+        return [initial_vertex1,initial_vertex2]
+    
+    iter = 0
+    iter_limit = 200
+    bisec_tol = 1.0e-1
+    
+    # v1 moving
+    if (circ_eval(*initial_vertex1) >= radius_w_buffer**2):
+        start_v = copy.deepcopy(initial_vertex2)
+        end_v = copy.deepcopy(initial_vertex1)
+    # v2 moving
+    else:
+        start_v = copy.deepcopy(initial_vertex1)
+        end_v = copy.deepcopy(initial_vertex2)
+    
+    while (iter < iter_limit):
+        temp_v = copy.deepcopy(0.5*(start_v+end_v))
+        if (circ_eval(*temp_v) - radius_w_buffer**2 > bisec_tol):
+            end_v = copy.deepcopy(temp_v)
+        elif (circ_eval(*temp_v) - radius_w_buffer**2 < -bisec_tol):
+            start_v = copy.deepcopy(temp_v)
+        else:
+            final_vertex = copy.deepcopy(temp_v)
+            break
+        iter = iter+1
+        if (iter == iter_limit):
+            final_vertex = copy.deepcopy(temp_v)
+            print("WARNING: readjust_vertices_for_wall_veins")
+            print("Hit iteration limit in x-y point move")
+            
+            
+            
+    #########################
+    ## Height root finding ##
+    #########################
+    
+    # v1 moving
+    if (circ_eval(*initial_vertex1) >= radius_w_buffer**2):
+        vertex1 = copy.deepcopy(final_vertex)
+        vertex2 = copy.deepcopy(initial_vertex2)
+        
+        v_length = lambda v : \
+            numpy.linalg.norm( \
+                copy.deepcopy(v-initial_vertex2))
+        ratio = lambda v : \
+            1.0 - v_length(v)/initial_length
+        temp_v = copy.deepcopy(vertex1)
+    # v2 moving
+    else:
+        vertex1 = copy.deepcopy(initial_vertex1)
+        vertex2 = copy.deepcopy(final_vertex)
+        
+        v_length = lambda v : \
+            numpy.linalg.norm( \
+                copy.deepcopy(v-initial_vertex1))
+        ratio = lambda v : \
+            v_length(v)/initial_length
+        temp_v = copy.deepcopy(vertex2)
+        
+    
+    iter = 0
+    bisec_tol = 1.0e-3
+    err = 1.0
+    
+    # v1 moving
+    if (circ_eval(*initial_vertex1) >= radius_w_buffer**2):
+        start_v = copy.deepcopy(initial_vertex2)
+        end_v = copy.deepcopy(initial_vertex1)
+    # v2 moving
+    else:
+        start_v = copy.deepcopy(initial_vertex1)
+        end_v = copy.deepcopy(initial_vertex2)
+        
+    # This says that the end point of the wall is less than can hold vein on so want to find a point s.t. the endpoint is just tall enough to hold a vein
+    if (wall_height(ratio(temp_v)) - wall_vein_buffer_on_wall < -bisec_tol):
+        while (iter < iter_limit):
+            temp_v = copy.deepcopy(0.5*(start_v+end_v))
+            if (wall_height(ratio(temp_v)) - wall_vein_buffer_on_wall > bisec_tol):
+                start_v = temp_v
+            elif (wall_height(ratio(temp_v)) - wall_vein_buffer_on_wall < -bisec_tol):
+               end_v = temp_v
+            else:
+                final_vertex = copy.deepcopy(temp_v)
+                break
+            iter = iter+1
+            if (iter == iter_limit):
+                print("WARNING: readjust_vertices_for_wall_veins")
+                print("Hit iteration limit in z point move")
+                final_vertex = copy.deepcopy(temp_v)
+
+        """print(f"final v: {final_vertex}")
+        gmsh.model.occ.addPoint(*final_vertex,wall_height(ratio(final_vertex)),meshSize=1.0)
+        gmsh.model.occ.synchronize()
+        gmsh.fltk.run()"""
+            
+    # v1 moving
+    if (circ_eval(*initial_vertex1) >= radius_w_buffer**2):
+        vertex1 = copy.deepcopy(vertex2 - 0.8*(vertex2-final_vertex))
+    # v2 moving
+    else:
+        vertex2 = copy.deepcopy(vertex1 - 0.8*(vertex1-final_vertex))
+    
+    return [vertex1,vertex2]
+
+def readjust_vertices_for_wall_veins_o2(cotyledon_no,vertex1,vertex2,radius,edge_no,edge_set):
+
+    initial_length = edge_set.edge_length[edge_no]
+
+    wall_height = lambda ratio : \
+        edge_set.calc_rel_height_along_edge(edge_no,ratio)
+        
+    v_length = lambda v1,v2 : \
+        numpy.linalg.norm(copy.deepcopy(vertex2-vertex1))
+
+    # Make sure vertex1 is the one inside circle
+    if (circ_eval(*vertex1) < radius and circ_eval(*vertex2) < radius):
+        return [vertex1,vertex2]
+    elif (circ_eval(*vertex1) >= radius):
+        temp_v = copy.deepcopy(vertex1)
+        vertex1 = copy.deepcopy(vertex2)
+        vertex2 = copy.deepcopy(temp_v)
+    
+    iter = 0
+    iter_limit = 200
+    bisec_tol = 1.0e-1
+    start_v = copy.deepcopy(vertex1)
+    end_v = copy.deepcopy(vertex2)
+    
+    while (iter < iter_limit):
+        temp_v = copy.deepcopy(0.5*(start_v+end_v))
+        if (circ_eval(*temp_v) - radius > bisec_tol):
+            end_v = temp_v
+        elif (circ_eval(*temp_v) - radius < -bisec_tol):
+            start_v = temp_v
+        else:
+            vertex2 = copy.deepcopy(temp_v)
+            break
+        iter = iter+1
+        if (iter == iter_limit):
+            print("WARNING: readjust_vertices_for_wall_veins")
+            print("Hit iteration limit in x-y point move")
+    
+    iter = 0
+    bisec_tol = 1.0e-3
+    err = 1.0
+    start_v = copy.deepcopy(vertex1)
+    end_v = copy.deepcopy(vertex2)
+    length = v_length(vertex1,vertex2)
+    ratio = length/initial_length
+    # This says that the end point of the wall is less than can hold vein on so want to find a point s.t. the endpoint is just tall enough to hold a vein
+    if (wall_height(ratio) - wall_vein_buffer_on_wall < -bisec_tol):
+        while (iter < iter_limit):
+            temp_v = copy.deepcopy(0.5*(start_v+end_v))
+            length = v_length(vertex1,temp_v)
+            ratio = length/initial_length
+            if (wall_height(ratio) - wall_vein_buffer_on_wall > bisec_tol):
+                start_v = temp_v
+            elif (wall_height(ratio) - wall_vein_buffer_on_wall < -bisec_tol):
+               end_v = temp_v
+            else:
+                vertex2 = copy.deepcopy(temp_v)
+                break
+            iter = iter+1
+            if (iter == iter_limit):
+                print("WARNING: readjust_vertices_for_wall_veins")
+                print("Hit iteration limit in z point move")
+            
+    # Buffer
+    vertex2 = copy.deepcopy(vertex1 + 0.8*(vertex2-vertex1))
+    
+    return [vertex1,vertex2]
+
+def readjust_vertices_for_wall_veins_o(cotyledon_no,vertex1,vertex2,radius):
     
     rsr_c = removal_sphere_radius(cotyledon_wall_heights[cotyledon_no])
     
@@ -1237,9 +1485,9 @@ def add_wall_from_edge_with_joint(model,edge_no,edge_set,wall_thickness) -> None
     vertex_set = edge_set.node_set
     v_nos = copy.deepcopy(edge_set.edge[edge_no,:])
     v0 = vertex_set.node[v_nos[0],:]
-    v0_h = vertex_set.node_height[v_nos[0]]
+    v0_h = vertex_set.nodal_wall_height[v_nos[0]]
     v1 = vertex_set.node[v_nos[1],:]
-    v1_h = vertex_set.node_height[v_nos[1]]
+    v1_h = vertex_set.nodal_wall_height[v_nos[1]]
     
     edge_dir = edge_set.edge_dir[edge_no,:]
     edge_length = edge_set.edge_length[edge_no]
@@ -1272,9 +1520,9 @@ def add_wall_from_edge(model,edge_no,edge_set,wall_thickness) -> None:
     vertex_set = edge_set.node_set
     v_nos = copy.deepcopy(edge_set.edge[edge_no,:])
     v0 = vertex_set.node[v_nos[0],:]
-    v0_height = vertex_set.node_height[v_nos[0]]
+    v0_height = vertex_set.vertex_set.nodal_wall_height[v_nos[0]]
     v1 = vertex_set.node[v_nos[1],:]
-    v1_height = vertex_set.node_height[v_nos[1]]
+    v1_height = vertex_set.vertex_set.nodal_wall_height[v_nos[1]]
     
     edge_dir = edge_set.edge_dir[edge_no,:]
     normal_dir = numpy.array([-edge_dir[1],edge_dir[0]])
@@ -1380,7 +1628,7 @@ def add_joint_from_node(model,node_no,node_set,wall_thickness) -> None:
     curr_vol = model.occ.getMaxTag(3)
     
     v_loc = copy.deepcopy(node_set.node[node_no,:])
-    v_z = node_set.node_height[node_no]
+    v_z = node_set.vertex_set.nodal_wall_height[node_no]
     
     # Find distance to bottom wall
     p_height = sphere_surface_eval(*v_loc[0:2],initial_sphere_radius,0.0)
@@ -1410,6 +1658,11 @@ def calc_sphere_height_at_xy(xy_pt):
 def calc_sphere_interior_height_at_xy(xy_pt):
     
     return (placenta_height - calc_sphere_height_at_xy(xy_pt))
+
+# Height of interior z distance
+def calc_sphere_interior_height_frac_at_xy(xy_pt):
+    
+    return (1.0 - calc_sphere_height_at_xy(xy_pt)/placenta_height)
 
 
 

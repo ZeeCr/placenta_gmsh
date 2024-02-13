@@ -96,21 +96,82 @@ def create_cotyledons(model,points,no_cells,voronoi_diagram):
         wall_height,wall_height_variability, \
         outer_wall_height,outer_wall_height_variability,outer_wall_cutoff)
     
-    
     plots.plot_placentone_list(points,cotyledon_list)
     
     return [node_set,edge_set,cotyledon_list]
 
 
-def create_lobules(model,c_node_set,c_edge_set):
+def create_lobules(model,no_cotyledon,cotyledon_list,c_node_set,c_edge_set):
     
-    wall_height = min(c_node_set.node_heights[:])
+    no_lobules = 0
+    lobule_list = []
     
-    v_type = 'lobule'
+    for cotyledon_no in range(0,no_cotyledon):
+        
+        v_type = 'lobule'
+        wall_thickness = lobule_wall_thickness
+        wall_height = c_node_set.calc_cell_min_node_height_within_cutoff( \
+            cotyledon_no,placenta_radius)/1.5
+        wall_height_variability = 0.0#wall_height/4.0
+        outer_wall_height = c_node_set.calc_cell_min_node_height_outside_cutoff( \
+            cotyledon_no,placenta_radius)
+        outer_wall_height_variability = 0.0#outer_wall_height/4.0
+        outer_wall_cutoff = placenta_radius
+        joint_transition = 0.05 # Note that for lobules, this has a hack for small edges in set_transition_points_percent
+        
+        logger.info("---------------------\n" + \
+                     f"Setting up sub placentones for {cotyledon_no}")
+        print("---------------------\n" + \
+                     f"Setting up sub placentones for {cotyledon_no}")    
+        cotyledon_no_vertices = cotyledon_list[cotyledon_no].no_vertices
+        cotyledon_vertices = numpy.copy(cotyledon_list[cotyledon_no].vertices)
 
-    [node_set,edge_set,lobule_list] = create_c_l_cut( \
-        model,no_cells,voronoi_diagram, \
-        v_type,wall_thickness,joint_transition)
+        if (not(fixed_lobules)):
+            if (cotyledon_list[cotyledon_no].boundary_cell):
+                sub_voronoi = fns.lloyds_algorithm(cotyledon_no_vertices,cotyledon_vertices,no_lobules_outer)
+                no_lobules_to_add=no_lobules_outer
+            else:
+                sub_voronoi = fns.lloyds_algorithm(cotyledon_no_vertices,cotyledon_vertices,no_lobules_inner)
+                no_lobules_to_add=no_lobules_inner
+            no_lobules=no_lobules+no_lobules_to_add
+        else:
+            
+            if (lobule_foronoi_type == 'standard'):
+                pgon = foronoi.Polygon(cotyledon_vertices)
+            elif (lobule_foronoi_type == 'concave'):
+                pgon = ConcavePolygon(cotyledon_vertices)
+            else:
+                print(f"Error: create_lobules")
+                print(f"Unrecognised lobule_foronoi_type: {lobule_foronoi_type}")
+                sys.exit(-1)
+                
+            sub_voronoi = foronoi.Voronoi(pgon)
+            sub_voronoi.create_diagram(points = \
+                    f_lobule_pts[0:f_no_lobule_pts[cotyledon_no]+1,:,cotyledon_no])
+            
+            no_lobules_to_add = f_no_lobule_pts[cotyledon_no]
+            no_lobules = no_lobules + f_no_lobule_pts[cotyledon_no]
+            
+            vis = foronoi.Visualizer(sub_voronoi, canvas_offset=0)
+            vis.plot_sites(show_labels=True)
+            vis.plot_edges(show_labels=True)
+            vis.plot_vertices()
+            vis.plot_border_to_site()
+            vis.show()
+            
+        [node_set,edge_set,sub_lobule_list] = create_c_l_cut( \
+            model,no_lobules_to_add,sub_voronoi, \
+            v_type,wall_thickness,joint_transition, \
+            wall_height,wall_height_variability, \
+            outer_wall_height,outer_wall_height_variability,outer_wall_cutoff)
+        
+        #lobule_list.append(sub_lobule_list)
+        for i in sub_lobule_list:
+            lobule_list.append(i)
+        
+        model.occ.synchronize()
+    
+    return [node_set,edge_set,no_lobules,lobule_list]
 
 def create_c_l_cut(model,no_cells,voronoi_diagram, \
         v_type,wall_thickness,joint_transition, \
@@ -120,24 +181,21 @@ def create_c_l_cut(model,no_cells,voronoi_diagram, \
     struct_list = []
     
     for cell_no in range(0,no_cells):
-
-        curr_pt = model.occ.getMaxTag(0)+1
-        curr_line = model.occ.getMaxTag(1)+1
+        
         logger.info("---------------------\n" + \
-                     f"Setting up structure {cell_no} from foronoi \n" + \
-                     f"curr_pt: {curr_pt} \n" + \
-                     f"curr_line: {curr_line}")
+                     f"Setting up structure {cell_no} from foronoi")
         
         frni_placentone = frni.ForonoiPlacentone( \
                 voronoi_diagram.sites[cell_no],placenta_radius)
         
         struct_list.append(frni_placentone)
         
-    node_set = clses.NodeSet(2)
+    node_set = clses.NodeSet(2,v_type)
     node_set.set_from_placentone_obj(struct_list)
-    node_set.set_node_heights(v_type, \
+    node_set.set_abs_wall_heights( \
         wall_height,wall_height_variability, \
         outer_wall_height,outer_wall_height_variability,outer_wall_cutoff)
+    node_set.set_rel_and_nodal_wall_heights_cutoff(outer_wall_cutoff)
     edge_set = clses.EdgeSet(node_set) 
     edge_set.set_from_placentone_obj(struct_list)
     edge_set.set_transition_points_percent(joint_transition)
@@ -483,6 +541,7 @@ def create_lobules2(model,cotyledons):
                 print(f"Error: create_lobules")
                 print(f"Unrecognised lobule_foronoi_type: {lobule_foronoi_type}")
                 sys.exit(-1)
+                
             sub_voronoi = foronoi.Voronoi(pgon)
             sub_voronoi.create_diagram(points = \
                     f_lobule_pts[0:f_no_lobule_pts[placentone_no]+1,:,placentone_no])
@@ -586,8 +645,6 @@ def create_lobules2(model,cotyledons):
             # Store sub placentones in list
             lobules.append(frni_lobule)
             lobules_shrunk.append(frni_lobule_shrunk)
-            
-            gmsh.fltk.run()
             
 
     return [no_lobules,lobules,lobules_shrunk]
