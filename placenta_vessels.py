@@ -50,7 +50,11 @@ def add_spiral_arteries_and_lobule_veins(model,no_lobules, \
     for placentone_no in range(0,no_lobules):
         
         # The basal vein part needs info from here, so can't just comment it all out
-        add_artery_to_lobule = numpy.random.randint(0,2)
+        artery_prob = numpy.random.randint(1,11)
+        if (artery_prob <= artery_bias):
+            add_artery_to_lobule = 1
+        else:
+            add_artery_to_lobule = 0
         to_store_artery_added[placentone_no] = add_artery_to_lobule
         
         print(f"Adding sub placentone {placentone_no} / {no_lobules-1}")

@@ -69,6 +69,10 @@ inner_sub_radius = 0.5*placenta_radius
 
 placenta_voronoi_outer_radius_offset = placenta_radius/3.0
 outer_angle_variance = lambda no_p : 2.0*math.pi/(1.0*(no_p-no_inner_placentones))
+
+# Artery bias
+# 1 == 10% chance, 4 == 40% chance, 5 == 50% chance, 10 == 100% chance of there being an artery in a given lobule
+artery_bias = 2
 ######################## END OF USER INFO ########################
 
 ######################## MESH SIZE ########################
