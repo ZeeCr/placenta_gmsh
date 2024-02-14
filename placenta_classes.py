@@ -543,6 +543,29 @@ class NodeSet:
                     min_height = self.rel_wall_height[glob_v_no]
                 
         return min_height
+    
+    def calc_avg_rel_wall_height_within_cutoff(self,cutoff) -> None:
+        
+        if (self.rel_wall_height is None):
+            print("ERROR: store_avg_rel_wall_height_within_cutoff")
+            print("rel_wall_height not initialised")
+            sys.exit(-1)
+        
+        counter = 0
+        avg_height = 0.0
+        
+        for node_no in range(0,self.no_nodes):
+            
+            xy_pt = copy.deepcopy(self.node[node_no,:])
+                
+            if (circ_eval(*xy_pt) < cutoff**2):
+                counter = counter + 1
+                avg_height = avg_height + self.rel_wall_height[node_no]
+                
+        if (counter > 0):
+            avg_height = avg_height / counter
+        
+        return avg_height
             
     def set_from_placentone_obj(self,placentone_obj) -> None:
         

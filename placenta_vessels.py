@@ -36,6 +36,9 @@ def add_spiral_arteries_and_lobule_veins(model,no_lobules, \
     inlet_faces = []
     cavity = clses.Cavity()
     cavities = []
+    
+    # Track artery info across placentones
+    to_store_artery_added = numpy.empty(no_lobules,dtype=int)
     # Track basal plate vein info across placentones
     to_store_stop_at_basal_veins_added = numpy.empty(0,dtype=int)
     to_store_no_vein_to_add = numpy.empty(0,dtype=int)
@@ -45,7 +48,11 @@ def add_spiral_arteries_and_lobule_veins(model,no_lobules, \
     #for placentone_no in [0]:
     #for placentone_no in range(0,no_placentones):
     for placentone_no in range(0,no_lobules):
-
+        
+        # The basal vein part needs info from here, so can't just comment it all out
+        add_artery_to_lobule = numpy.random.randint(0,2)
+        to_store_artery_added[placentone_no] = add_artery_to_lobule
+        
         print(f"Adding sub placentone {placentone_no} / {no_lobules-1}")
 
         # Add pipes
@@ -71,10 +78,6 @@ def add_spiral_arteries_and_lobule_veins(model,no_lobules, \
         placenta_plane_radius_vector_2d = placentone_pt_on_circle[0:2]
         placenta_plane_radius_vector_2d = fns.normalise_vector(2,placenta_plane_radius_vector_2d)
         placenta_tangent = numpy.array([-placenta_plane_radius_vector_2d[1],placenta_plane_radius_vector_2d[0]])
-        
-        # Update cavity with info for ellipsoid, reverse normal_vector sign for inward
-        cavity.update_cavity(centre = placentone_pt_on_circle,orientation_normal = -placenta_normal_vector)
-        cavities.append(copy.deepcopy(cavity))
 
         ##################### ARTERY SETUP ########################
         artery_pt_out_placenta = numpy.array([placentone_pt_on_circle[0]+septal_vessel_length*placenta_normal_vector[0], \
@@ -96,49 +99,54 @@ def add_spiral_arteries_and_lobule_veins(model,no_lobules, \
                                    septal_artery_radius,curr_volume)
         '''
         
-        model.occ.addCylinder( \
-            artery_pt_out_placenta[0],artery_pt_out_placenta[1],artery_pt_out_placenta[2], \
-            -cyl_dist*placenta_normal_vector[0], \
-            -cyl_dist*placenta_normal_vector[1], \
-            -cyl_dist*placenta_normal_vector[2], \
-            septal_artery_radius,curr_volume)
-        cyl_face = model.occ.getMaxTag(2)
-        bb = model.occ.getBoundingBox(2,cyl_face)
-
-        bounding_box.update_bounds(bb)
-
-        face_no = fns.get_face_in_bb(bounding_box)
-        bounding_boxes.append(copy.deepcopy(bounding_box))
-
-        model.occ.fuse([(3,1)],[(3,curr_volume)])
-
-        try:
-
-            # An occasional error means that the centroid is outside the placental domain
-            fns.check_unique_vol(model)
+        if (add_artery_to_lobule == 1):
             
-            max_vol_tag = model.occ.getMaxTag(3)
-            gmsh.model.occ.fillet([max_vol_tag], \
-                [fns.find_line_with_centre(model,artery_pt_on_placenta)], \
-                [septal_artery_funnel_radius])
-
-            # Incrememnt inlet
-            no_inlets = no_inlets+1
+            # Update cavity with info for ellipsoid, reverse normal_vector sign for inward
+            cavity.update_cavity(centre = placentone_pt_on_circle,orientation_normal = -placenta_normal_vector)
+            cavities.append(copy.deepcopy(cavity))
             
-            # Increment cavities
-            no_cavities = no_cavities + 1
+            model.occ.addCylinder( \
+                artery_pt_out_placenta[0],artery_pt_out_placenta[1],artery_pt_out_placenta[2], \
+                -cyl_dist*placenta_normal_vector[0], \
+                -cyl_dist*placenta_normal_vector[1], \
+                -cyl_dist*placenta_normal_vector[2], \
+                septal_artery_radius,curr_volume)
+            cyl_face = model.occ.getMaxTag(2)
+            bb = model.occ.getBoundingBox(2,cyl_face)
 
-            face.update_face(cyl_face,artery_pt_out_placenta,placenta_normal_vector)
-            inlet_faces.append(copy.deepcopy(face))    
+            bounding_box.update_bounds(bb)
 
-        except Exception:
+            face_no = fns.get_face_in_bb(bounding_box)
+            bounding_boxes.append(copy.deepcopy(bounding_box))
 
-            print(f"Error setting up artery in sub placentone")
-            model.occ.remove([(3,curr_volume)], recursive=True)
-            
-            # Pop cavities as it's appended earlier assuming that the artery will be placed
-            cavities.pop()
+            model.occ.fuse([(3,1)],[(3,curr_volume)])
 
+            try:
+
+                # An occasional error means that the centroid is outside the placental domain
+                fns.check_unique_vol(model)
+                
+                max_vol_tag = model.occ.getMaxTag(3)
+                gmsh.model.occ.fillet([max_vol_tag], \
+                    [fns.find_line_with_centre(model,artery_pt_on_placenta)], \
+                    [septal_artery_funnel_radius])
+
+                # Incrememnt inlet
+                no_inlets = no_inlets+1
+                
+                # Increment cavities
+                no_cavities = no_cavities + 1
+
+                face.update_face(cyl_face,artery_pt_out_placenta,placenta_normal_vector)
+                inlet_faces.append(copy.deepcopy(face))    
+
+            except Exception:
+
+                print(f"Error setting up artery in sub placentone")
+                model.occ.remove([(3,curr_volume)], recursive=True)
+                
+                # Pop cavities as it's appended earlier assuming that the artery will be placed
+                cavities.pop()
 
 
 
@@ -277,6 +285,7 @@ def add_spiral_arteries_and_lobule_veins(model,no_lobules, \
                 break
             
     # Print out the structure across placentones
+    print(f"artery added array: {numpy.array2string(to_store_artery_added,separator = ',')}")
     print(f"basal veins added array: {numpy.array2string(to_store_stop_at_basal_veins_added,separator = ',')}")
     print(f"no veins added array: {numpy.array2string(to_store_no_vein_to_add,separator = ',')}")
     print(f"vein power array: {numpy.array2string(to_store_vein_power,separator = ',')}")
@@ -523,7 +532,7 @@ def create_septal_veins(model,no_cotyledon,cotyledons, \
                 
                 edge_ratio = numpy.random.random()
                 # Hack to stop point being too close to edge
-                while (edge_ratio < 0.1):
+                while (edge_ratio < 0.2):
                     edge_ratio = numpy.random.random()
                     
                 # Either fix height ratio or choose randomly

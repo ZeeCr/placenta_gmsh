@@ -438,6 +438,8 @@ def set_gmsh_optns(gmsh):
     
     gmsh.model.add("placenta")
     
+    gmsh.option.setNumber("Mesh.MshFileVersion", 2.2)
+    
     #gmsh.option.setNumber("Geometry.MatchMeshTolerance",1.0e-6)
     #gmsh.option.setNumber("Geometry.Tolerance",1.0e-8)
     #gmsh.option.setNumber("Geometry.ToleranceBoolean",1.0e-9)
