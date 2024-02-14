@@ -7,6 +7,8 @@ def read_idx():
     with idx_file.open('r') as file:
         idx = int(file.read())
         file.close()
+        
+    return idx
 
 def read_update_idx():
     idx_file = Path('id_idx.dat')
