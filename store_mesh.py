@@ -39,15 +39,19 @@ def move_files(meshID,idx) -> None:
     cwd = Path.cwd()
     meshes_dir = cwd / 'meshes'
     sub_dir_pth = meshes_dir / meshID
+    data_dir_pth = sub_dir_pth / "data"
+    code_dir_pth = sub_dir_pth / "code"
     sub_dir_pth.mkdir(parents=True, exist_ok=True)
+    data_dir_pth.mkdir(parents=True, exist_ok=True)
+    code_dir_pth.mkdir(parents=True, exist_ok=True)
     
     # Create new index file, then move it into the new directory
-    new_idx_file = sub_dir_pth / 'id_idx.dat'
+    new_idx_file = data_dir_pth / 'id_idx.dat'
     with new_idx_file.open('w') as file:
         file.write(str(idx))
         file.close()
     # Create new mesh ID file, then move it into the new directory
-    new_id_file = sub_dir_pth / 'mesh_id.dat'
+    new_id_file = data_dir_pth / 'mesh_id.dat'
     with new_id_file.open('w') as file:
         file.write(meshID)
         file.close()
@@ -55,13 +59,13 @@ def move_files(meshID,idx) -> None:
     # Move files into the newly created directory
     filenames = ['geom_info.csv', \
                 'mesh_info.csv','cavity_info.csv','outlet_info.csv','c_wall_info.csv', \
-                f'{meshID}.vtk',f'{meshID}.msh',f'{meshID}_surf.vtk']
+                'mesh.vtk','mesh.msh','mesh_surf.vtk']
     
     for nme in filenames:
         csv_file = Path(nme)
-        csv_file.rename(sub_dir_pth / csv_file.name)
+        csv_file.rename(data_dir_pth / csv_file.name)
        
-    copy_code_to_directory(sub_dir_pth) 
+    copy_code_to_directory(code_dir_pth) 
 
 def store_mesh(gmsh,mesh_prefix) -> None:
     
@@ -71,11 +75,11 @@ def store_mesh(gmsh,mesh_prefix) -> None:
     
     gmsh.model.occ.synchronize()
     gmsh.model.mesh.generate(2)
-    gmsh.write(f'{meshID}_surf.vtk')
+    gmsh.write('mesh_surf.vtk')
     gmsh.model.mesh.generate(3)
     gmsh.model.mesh.optimize(method="Netgen")
-    gmsh.write(f'{meshID}.vtk')
-    gmsh.write(f'{meshID}.msh')
+    gmsh.write('mesh.vtk')
+    gmsh.write('mesh.msh')
 
     move_files(meshID,idx)
 
