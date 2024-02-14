@@ -2,15 +2,23 @@ import os
 from pathlib import Path
 import shutil
 
+def read_idx():
+    idx_file = Path('id_idx.dat')
+    with idx_file.open('r') as file:
+        idx = int(file.read())
+        file.close()
+
 def read_update_idx():
     idx_file = Path('id_idx.dat')
     with idx_file.open('r') as file:
         idx = int(file.read())
+        file.close()
         
     # Increment the integer and save it back to 'idx.dat'
     new_idx = idx + 1
     with idx_file.open('w') as file:
         file.write(str(new_idx))
+        file.close()
     return idx
 
 def copy_code_to_directory(dir_path):
@@ -35,10 +43,12 @@ def move_files(meshID,idx) -> None:
     new_idx_file = sub_dir_pth / 'id_idx.dat'
     with new_idx_file.open('w') as file:
         file.write(str(idx))
+        file.close()
     # Create new mesh ID file, then move it into the new directory
     new_id_file = sub_dir_pth / 'mesh_id.dat'
     with new_id_file.open('w') as file:
         file.write(meshID)
+        file.close()
 
     # Move files into the newly created directory
     filenames = ['geom_info.csv', \
