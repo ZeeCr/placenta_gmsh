@@ -71,7 +71,7 @@ def store_mesh(gmsh,mesh_prefix) -> None:
     
     idx = read_update_idx()
     
-    meshID = mesh_prefix + "_" + str(idx)
+    meshID = str(idx) + "_" + mesh_prefix
     
     gmsh.model.occ.synchronize()
     gmsh.model.mesh.generate(2)
