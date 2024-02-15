@@ -159,7 +159,11 @@ def add_spiral_arteries_and_lobule_veins(model,no_lobules, \
         # BASSAL PLATE VEINS #
 
         no_veins_added = 0
-        no_vein_to_add = numpy.random.randint(0,3)
+        no_vein_to_add = 0
+        for i in range(1,3):
+            if (numpy.random.randint(1,11) <= basal_vein_bias):
+                no_vein_to_add = no_vein_to_add + 1
+        #no_vein_to_add = numpy.random.randint(0,3)
         stop_at_veins_added = 2
         if (no_vein_to_add == 1 or stop_at_veins_added == 1):
             vein_power = numpy.random.randint(1,3)

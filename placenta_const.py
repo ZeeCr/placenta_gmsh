@@ -72,7 +72,8 @@ outer_angle_variance = lambda no_p : 2.0*math.pi/(1.0*(no_p-no_inner_placentones
 
 # Artery bias
 # 1 == 10% chance, 4 == 40% chance, 5 == 50% chance, 10 == 100% chance of there being an artery in a given lobule
-artery_bias = 2
+artery_bias = 5
+basal_vein_bias = 3
 ######################## END OF USER INFO ########################
 
 ######################## MESH SIZE ########################
