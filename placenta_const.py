@@ -73,7 +73,7 @@ outer_angle_variance = lambda no_p : 2.0*math.pi/(1.0*(no_p-no_inner_placentones
 # Artery bias
 # 1 == 10% chance, 4 == 40% chance, 5 == 50% chance, 10 == 100% chance of there being an artery in a given lobule
 artery_bias = 5
-basal_vein_bias = 3
+basal_vein_bias = 5
 ######################## END OF USER INFO ########################
 
 ######################## MESH SIZE ########################
@@ -94,7 +94,7 @@ mesh_transition_length = 4.0 / char_length#mesh_offset_length
 
 
 ######################## FIXED OBJECTS ########################
-placenta_id = 'C'
+placenta_id = 'B'
 
 fixed_cotyledon_pts = True
 
@@ -104,7 +104,7 @@ fixed_lobules = True
 
 stored_basal_veins = False
 
-stored_cotyledon_wall_heights = True
+stored_cotyledon_wall_heights = False
 random_cotyledon_wall_heights = True
 # With random walls, placentone_removal_height - maxima_.. <= wall height <= placentone_rh + maxima_..
 maxima_cotyledon_wall_heights = placentone_removal_height/2.0
@@ -354,14 +354,14 @@ if (stored_basal_veins):
 cotyledon_wall_heights = numpy.empty(no_placentones)
 lobule_wall_heights = numpy.empty(no_placentones)
 if (stored_cotyledon_wall_heights):
+    print(f"stored_cotyledon_wall_heights == True but not implemented yet for node_set height objs")
+    sys.exit(-1)    
     if (placenta_id == 'A'):
         cotyledon_wall_heights = [ \
             14.0,14.0,14.0,14.0,14.0,14.0]
     elif (placenta_id == 'C'):
         cotyledon_wall_heights[:] = [ \
              1.66008201,1.82388559,1.5818771 ,0.81603679,1.65974472,1.24322865]
-        
-        cotyledon_wall_heights[:] = [1.06535941,1.76038427,1.63020321,1.87078275,0.74165982,1.60105765] # remove after
     else:
         print(f"stored_cotyledon_wall_heights: not implemented for case {placenta_id}")
         sys.exit(-1)
