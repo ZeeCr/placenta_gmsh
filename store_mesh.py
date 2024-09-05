@@ -57,8 +57,8 @@ def move_files(meshID,idx) -> None:
         file.close()
 
     # Move files into the newly created directory
-    filenames = ['geom_info.csv', \
-                'mesh_info.csv','cavity_info.csv','outlet_info.csv','c_wall_info.csv', \
+    filenames = ['geom_info.csv','mesh_info.csv', \
+                'cavity_info.csv','outlet_info.csv','c_wall_info.csv','c_loc.csv', \
                 'mesh.vtk','mesh.msh','mesh_surf.vtk']
     
     for nme in filenames:
