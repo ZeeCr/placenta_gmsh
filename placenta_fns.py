@@ -168,6 +168,33 @@ def does_cell_intersect_circle(no_vertices,no_edges,vertices,edges,circle_r):
         #print("Not obvious whether intersect or not")
         return [False,intersection_edges]
 
+
+def check_orientation_of_polygon(nodes):
+    
+    if (nodes.shape[0] < 3):
+        print("Error: check_orientation_of_polygon")
+        print("Not enough nodes to form polygon")
+        sys.exit(-1)
+    elif (nodes.shape[1] != 2):
+        print("Error: check_orientation_of_polygon")
+        print("Nodes not in 2D, I'm not sure if extension to 3D works (might be fine)")
+        sys.exit(-1)
+            
+    # Check if polygon is oriented clockwise or anticlockwise
+    # If the polygon is oriented clockwise, the area will be negative
+    # If the polygon is oriented anticlockwise, the area will be positive
+    area = 0.0
+    for i in range(0,nodes.shape[0]-1):
+        area = area + (nodes[i,0]*nodes[i+1,1]-nodes[i+1,0]*nodes[i,1])
+    area = area + (nodes[nodes.shape[0]-1,0]*nodes[0,1]-nodes[0,0]*nodes[nodes.shape[0]-1,1])
+    area = 0.5*area
+    
+    reversed_nodes = copy.deepcopy(nodes)
+    if (area < 0):
+        reversed_nodes = reversed_nodes[::-1]
+        
+    return reversed_nodes            
+            
 # [0,1],[1,2],[n,0], .. etc
 def setup_standard_loop_ordering(no_vertices):
 
