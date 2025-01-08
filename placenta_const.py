@@ -51,7 +51,8 @@ septal_vessel_length = 5.0 / char_length
 # results in this sphere appearing back in the geometry
 no_marginal_sinus_veins = 6 # Note, this is basically a maximum no. now
 marginal_sinus_vein_radius = math.sqrt(2) / char_length#math.sqrt(2.0)#2.0*septal_vein_radius
-marginal_sinus_vein_offset = 0.05*math.pi + 2*(2.0*math.pi/6.0)/4.0
+marginal_sinus_vein_offset = 0.05*math.pi + 2*(2.0*math.pi/no_marginal_sinus_veins)/4.0
+marginal_sinus_vein_offset_buffer = 0.1 # Between 0 and 0.5, used in create_marginal_veins. Done to ensure marginal veins are randomised in this section but also so that they don't overlap
 marginal_fillet_radius = 0.75*marginal_sinus_vein_radius # Radius of septal veins fillet, total radius = vein_radius+fillet_radius
 marginal_vein_height_from_top = 3.5 / char_length #marginal_vein_height = placenta_height - marginal_vein_height_from_top
 
@@ -67,13 +68,19 @@ top_cyl_height = 2*marginal_sinus_vein_radius #mm
 # Radius of inner circle which contains inner Voronoi points and cells
 inner_sub_radius = 0.5*placenta_radius
 
-placenta_voronoi_outer_radius_offset = placenta_radius/3.0
+# Used inside fns/shrink_outside_vertices for determing how far to shrink cotyledon vertices 
+# This was also re-defined if fixed_cotyledon_pts used
+# I think it was used to make sure variables were the same for fixed cotyledon configurations
+# But it ended up that for different lobule wall configurations, some lobules could be almost all outside domain as e.g. 'A' cotyledon had large value
+# Removed that as of 08/01/25 but commented out values still there
+placenta_voronoi_outer_radius_offset = 0.25*placenta_radius/3.0
+
 outer_angle_variance = lambda no_p : 2.0*math.pi/(1.0*(no_p-no_inner_placentones))
 
 # Artery bias
 # 1 == 10% chance, 4 == 40% chance, 5 == 50% chance, 10 == 100% chance of there being an artery in a given lobule
 artery_bias = 5
-basal_vein_bias = 5
+basal_vein_bias = 0
 ######################## END OF USER INFO ########################
 
 ######################## MESH SIZE ########################
@@ -94,13 +101,13 @@ mesh_transition_length = 4.0 / char_length#mesh_offset_length
 
 
 ######################## FIXED OBJECTS ########################
-placenta_id = 'B'
+placenta_id = 'A'
 
 fixed_cotyledon_pts = True
 
 fixed_septal_wall_veins = False # Septal wall veins
 
-fixed_lobules = True
+fixed_lobules = False
 
 stored_basal_veins = False
 
@@ -124,7 +131,7 @@ if (fixed_cotyledon_pts):
             (-55.0, 75.0),
             (-70.0, -25.0),
             (15.0,  -90.0)])     / char_length
-        placenta_voronoi_outer_radius_offset = placenta_radius/3.0
+        # placenta_voronoi_outer_radius_offset = placenta_radius/3.0
     elif (placenta_id == 'B'):
         # B
         no_stored_cotyledon = 5
@@ -134,7 +141,7 @@ if (fixed_cotyledon_pts):
             (-0.23575,0.24429),
             (-0.13684,0.78583),
             (-0.35732,-0.50212)])    *placenta_radius
-        placenta_voronoi_outer_radius_offset = 0.9*placenta_radius/3.0
+        # placenta_voronoi_outer_radius_offset = 0.9*placenta_radius/3.0
     elif (placenta_id == 'C'):
         # C
         no_stored_cotyledon = 6
@@ -145,7 +152,7 @@ if (fixed_cotyledon_pts):
             (0.13726,0.67105),
             (-0.59743,0.41519),
             (-0.51683,-0.45271)])    *placenta_radius
-        placenta_voronoi_outer_radius_offset = 0.25*placenta_radius/3.0
+        # placenta_voronoi_outer_radius_offset = 0.25*placenta_radius/3.0
     elif (placenta_id == 'test'):
         # test
         no_stored_cotyledon = 6

@@ -315,10 +315,14 @@ def create_marginal_veins(model,cotyledons,lobules,no_outlets,outlet_faces):
     
     model.occ.synchronize()
     
-    possible_veins = [i for i in range(0,no_marginal_sinus_veins)]
-    no_veins_to_add = numpy.random.randint(no_marginal_sinus_veins)
-    veins_to_add = numpy.random.choice( \
-        possible_veins,size=no_veins_to_add,replace=False)
+    if (no_marginal_sinus_veins > 0):
+        possible_veins = [i for i in range(0,no_marginal_sinus_veins)]
+        no_veins_to_add = numpy.random.randint(no_marginal_sinus_veins)
+        veins_to_add = numpy.random.choice( \
+            possible_veins,size=no_veins_to_add,replace=False)
+    else:
+        no_veins_to_add = 0
+        veins_to_add = []
 
     print(f"Number of peripheral veins to add: {no_veins_to_add}")
     print(f"Peripheral veins numbers: {veins_to_add}")
@@ -338,7 +342,10 @@ def create_marginal_veins(model,cotyledons,lobules,no_outlets,outlet_faces):
         
         cross_section_r = math.sqrt(initial_sphere_radius**2 - (marginal_vein_height-initial_sphere_radius)**2)
         
-        theta = marginal_sinus_vein_offset_shifted+vein_no*(2.0*math.pi/no_marginal_sinus_veins)
+        theta_mult = (2.0*math.pi/no_marginal_sinus_veins)
+        theta_rand = (1.0 - 2.0*marginal_sinus_vein_offset_buffer) * numpy.random.random() - 0.5 # shifts bound from [0, 1] of rand to e.g. [-0.4, 0.4]
+        theta = marginal_sinus_vein_offset_shifted+(vein_no+theta_rand)*theta_mult
+        
         vein_surface_pt[0] = cross_section_r*math.cos(theta)
         vein_surface_pt[1] = cross_section_r*math.sin(theta)
         
