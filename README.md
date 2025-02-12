@@ -1,1 +1,3 @@
 # placenta_gmsh
+
+12/02/25: The main issue stopping meshing right now is the line that can't be removed which goes along the sphere / spherical cap when it's created in OCC. This seems to have to be somewhere on the surface of the spherical cap which causes issues when doing the fillet -> fragment operation, as it separates the fillet curve into different parts.
