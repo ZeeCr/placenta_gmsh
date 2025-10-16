@@ -1,5 +1,7 @@
 # How-to
 
+Set up Python env via 'pip install -r requirements.txt'
+
 Configure placenta_const.py parameters, e.g. probability of a vein appearing in a lobule, mesh size in IVS etc.
 
 Run python_main.py, it will run until it successfully creates a mesh for the given parameters and then save it inside ./meshes

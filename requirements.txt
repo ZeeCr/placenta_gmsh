@@ -1,0 +1,10 @@
+# Core scientific computing libraries
+numpy
+scipy
+matplotlib
+
+# Mesh generation
+gmsh
+
+# Voronoi diagram generation
+foronoi
