@@ -65,22 +65,49 @@ def move_files(meshID,idx) -> None:
         csv_file = Path(nme)
         csv_file.rename(data_dir_pth / csv_file.name)
        
-    copy_code_to_directory(code_dir_pth) 
+    copy_code_to_directory(code_dir_pth)
+    
+def get_no_eles_in_mesh(gmsh):
+    
+    _, ele_tags, _ = gmsh.model.mesh.getElements(dim=3)
+    no_eles = sum(len(tags) for tags in ele_tags)
+    print(f"No. 3D eles: {no_eles}")
+    
+    return no_eles
 
 def store_mesh(gmsh,mesh_prefix) -> None:
+    
+    default_err_return = [-1,-1,-1]
     
     idx = read_update_idx()
     
     meshID = str(idx) + "_" + mesh_prefix
     
     gmsh.model.occ.synchronize()
-    gmsh.model.mesh.generate(2)
-    gmsh.write('mesh_surf.vtk')
-    gmsh.model.mesh.generate(3)
+    
+    # First run 3D mesher to check it'll mesh
+    try:
+        gmsh.model.mesh.generate(3)
+    except Exception as e:
+        print(f"Error occurred while generating 3D mesh: {e}")
+        return default_err_return
+
     gmsh.model.mesh.optimize(method="Netgen")
-    gmsh.write('mesh.vtk')
-    gmsh.write('mesh.msh')
 
-    move_files(meshID,idx)
+    no_eles = get_no_eles_in_mesh(gmsh)
+    print(f"No eles in mesh: {no_eles}")
+    
+    if (no_eles > 0):
+        gmsh.write('mesh.vtk')
+        gmsh.write('mesh.msh')
+        
+        gmsh.model.mesh.generate(2)
+        gmsh.write('mesh_surf.vtk')
 
-    return None
+        return [meshID,idx,no_eles]
+    
+    else:
+        print(f"ERROR: No elements found in mesh")
+        print(f"No eles in mesh: {no_eles}")
+        
+        return default_err_return

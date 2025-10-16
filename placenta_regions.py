@@ -116,15 +116,21 @@ def create_septal_fragment(model,outlet_faces,surf_COMs_to_ignore):
         line_no = fns.find_line_with_centre(model,inside_face_centre)
         
         try:
+            debug_int = 1
             model.occ.addCurveLoop([line_no])
+            debug_int = 2
             model.occ.addPlaneSurface([model.occ.getMaxTag(-1)])
         except:
             print(f"ERROR: create_septal_fragment")
-            print(f"Failed to create curve loop or plane surface")
+            if (debug_int == 1):
+                print(f"Failed to create curve loop")
+            elif (debug_int == 2):
+                print(f"Failed to create plane surface")
             model.occ.synchronize()
-            gmsh.fltk.run()
+            # gmsh.fltk.run()
             gmsh.finalize()
-            sys.exit(-1)
+            # sys.exit(-1)
+            raise Exception("Error in create_septal_fragment")
             
         COM = model.occ.getCenterOfMass(2,model.occ.getMaxTag(2))
         model.occ.fragment([(3,placenta_vol_no)],[(2,model.occ.getMaxTag(2))])

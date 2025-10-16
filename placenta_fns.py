@@ -615,14 +615,8 @@ def lloyds_algorithm(no_polygon_vertices,polygon_vertices,no_cells):
         #frni_placentone = frni.ForonoiPlacentone(v.sites[placentone_no],placenta_radius)
     
     # Indent in -> plot all iterations, outer -> just final
-    
-    vis = foronoi.Visualizer(v, canvas_offset=0)
-    vis.plot_sites(show_labels=True)
-    vis.plot_edges(show_labels=True)
-    vis.plot_vertices()
-    vis.plot_border_to_site()
-    vis.show()   
-    
+
+    # frni.visualise_voronoi(v)    
     
     print(f"Error = {err}")
     print(f"Generating points given by: ")
@@ -1218,6 +1212,23 @@ def readjust_vertices_for_wall_veins(cotyledon_no, \
     
     return [vertex1,vertex2]
 
+def check_septal_vein_overlap_lobule_walls( \
+    face_cyl_end_pt, lobule_node_set, \
+        radius,fillet,thickness):
+
+    for i in range(0,lobule_node_set.no_nodes):
+        if (abs(face_cyl_end_pt[2] - lobule_node_set.nodal_wall_height[i]) > \
+                radius + fillet):
+            continue
+        elif (numpy.linalg.norm(lobule_node_set.node[i,0:2] - face_cyl_end_pt[0:2]) < \
+                radius + fillet + thickness):
+            print(f"OVERLAP: check_septal_doesnt_overlap_lobule_walls")
+            print(f"lobule wall overlaps with septal vein")
+            print(f"lobule wall pt: {lobule_node_set.node[i,0:2]}")
+            print(f"septal vein pt: {face_cyl_end_pt[0:2]}")
+            return True
+    return False
+
 def readjust_vertices_for_wall_veins_o2(cotyledon_no,vertex1,vertex2,radius,edge_no,edge_set):
 
     initial_length = edge_set.edge_length[edge_no]
@@ -1691,7 +1702,13 @@ def calc_sphere_interior_height_frac_at_xy(xy_pt):
     
     return (1.0 - calc_sphere_height_at_xy(xy_pt)/placenta_height)
 
-
+def convert_float_to_gmsh_field_str(value: float) -> str:
+    
+    if (value<0.0):
+        value = f"({value})"
+    else:
+        value = f"{value}"
+    return value
 
 def replace_multiple_signs_in_str(old_str):
     

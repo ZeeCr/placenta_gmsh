@@ -84,7 +84,7 @@ def plot_placentone_list(points,placentone_list):
     
     return None
 
-def plot_edge_set(edge_set,placentone_list = None):
+def plot_edge_set(edge_set,placentone_list = None,plot_node_set = False):
 
     shift = placenta_voronoi_outer_radius_offset
     fig = plt.figure()
@@ -128,6 +128,14 @@ def plot_edge_set(edge_set,placentone_list = None):
         ax.text(*vec_line,str(edge_no), zorder=10,
             ha='center', va='top', weight='bold', color='r',
             fontfamily='Courier New',fontsize=24)
+        
+    if (plot_node_set):
+        for node_no in range(0,edge_set.node_set.no_nodes):
+            node = edge_set.node_set.node[node_no,:]
+            ax.text(*node,str(node_no), zorder=10,
+                ha='center', va='top', weight='bold', color='blue',
+                fontfamily='Courier New',fontsize=24)
+            ax.scatter(*node, zorder=8, color='blue')
         
     if (placentone_list is not None):
     

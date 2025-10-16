@@ -44,10 +44,12 @@ def setup_voronoi_pts():
         if (len(points) != no_placentones):
             print(f"ERROR setup_voronoi_pts: len(points) != no_placentones")
             logger.debug(f"len(points) = {len(points)}, no_placentones = {no_placentones}")
-            sys.exit(-10)
+            # sys.exit(-10)
+            raise Exception("Error in setup_voronoi_pts")
     else:
         print(f"ERROR setup_voronoi_pts: fixed_cotyledon_pts not specified")
-        sys.exit(-1)
+        # sys.exit(-1)
+        raise Exception("Error in setup_voronoi_pts")
 
     print(f"Voronoi generating points : \n {points}")
     
@@ -74,7 +76,7 @@ def setup_voronoi_diagram(points):
 
     voronoi_diagram = foronoi.Voronoi(polygon)
     voronoi_diagram.create_diagram(points=points)
-    frni.visualise_voronoi(voronoi_diagram)
+    # frni.visualise_voronoi(voronoi_diagram)
     
     return voronoi_diagram
 
@@ -96,7 +98,7 @@ def create_cotyledons(model,points,no_cells,voronoi_diagram):
         wall_height,wall_height_variability, \
         outer_wall_height,outer_wall_height_variability,outer_wall_cutoff)
     
-    plots.plot_placentone_list(points,cotyledon_list)
+    # plots.plot_placentone_list(points,cotyledon_list)
     
     return [node_set,edge_set,cotyledon_list]
 
@@ -105,6 +107,9 @@ def create_lobules(model,no_cotyledon,cotyledon_list,c_node_set,c_edge_set):
     
     no_lobules = 0
     lobule_list = []
+    
+    lobule_node_set_per_cotyledon = numpy.empty(no_cotyledon, dtype=object)
+    lobule_edge_set_per_cotyledon = numpy.empty(no_cotyledon, dtype=object)
     
     for cotyledon_no in range(0,no_cotyledon):
         
@@ -143,8 +148,10 @@ def create_lobules(model,no_cotyledon,cotyledon_list,c_node_set,c_edge_set):
             else:
                 print(f"Error: create_lobules")
                 print(f"Unrecognised lobule_foronoi_type: {lobule_foronoi_type}")
-                sys.exit(-1)
+                raise Exception("Unrecognised lobule_foronoi_type")
+                # sys.exit(-1)
                 
+            print("aASDSADSA\n\n\n\n\n")
             sub_voronoi = foronoi.Voronoi(pgon)
             sub_voronoi.create_diagram(points = \
                     f_lobule_pts[0:f_no_lobule_pts[cotyledon_no]+1,:,cotyledon_no])
@@ -152,12 +159,7 @@ def create_lobules(model,no_cotyledon,cotyledon_list,c_node_set,c_edge_set):
             no_lobules_to_add = f_no_lobule_pts[cotyledon_no]
             no_lobules = no_lobules + f_no_lobule_pts[cotyledon_no]
             
-            vis = foronoi.Visualizer(sub_voronoi, canvas_offset=0)
-            vis.plot_sites(show_labels=True)
-            vis.plot_edges(show_labels=True)
-            vis.plot_vertices()
-            vis.plot_border_to_site()
-            vis.show()
+            # frni.visualise_voronoi(sub_voronoi)
             
         [node_set,edge_set,sub_lobule_list] = create_c_l_cut( \
             model,no_lobules_to_add,sub_voronoi, \
@@ -168,10 +170,14 @@ def create_lobules(model,no_cotyledon,cotyledon_list,c_node_set,c_edge_set):
         #lobule_list.append(sub_lobule_list)
         for i in sub_lobule_list:
             lobule_list.append(i)
+            
+        lobule_node_set_per_cotyledon[cotyledon_no] = node_set
+        lobule_edge_set_per_cotyledon[cotyledon_no] = edge_set
         
         model.occ.synchronize()
     
-    return [node_set,edge_set,no_lobules,lobule_list]
+    return [node_set,edge_set,no_lobules,lobule_list, \
+        lobule_node_set_per_cotyledon,lobule_edge_set_per_cotyledon]
 
 def create_c_l_cut(model,no_cells,voronoi_diagram, \
         v_type,wall_thickness,joint_transition, \
@@ -241,7 +247,8 @@ def cut_from_voronoi(model, \
         if (debug_counter > 100):
             print("ERROR: cut_from_voronoi")
             print("Not fusing properly")
-            sys.exit(-1)
+            # sys.exit(-1)
+            raise Exception("Not fusing properly")
 
     # Cut walls
     model.occ.cut([(3,domain_vol)],[(3,2)])
@@ -310,12 +317,13 @@ def cut_from_voronoi_o(model,points,no_cells,voronoi_diagram):
         if (debug_counter > 100):
             print("ERROR: cut_from_voronoi")
             print("Not fusing properly")
-            sys.exit(-1)
+            # sys.exit(-1)
+            raise Exception("Not fusing properly")
 
     # Cut walls
     model.occ.cut([(3,domain_vol)],[(3,2)])
 
-    plots.plot_placentone_list(points,cotyledons)
+    # plots.plot_placentone_list(points,cotyledons)
         
     return [node_set,edge_set,cotyledons]
 
@@ -355,20 +363,16 @@ def create_lobules_o(model,cotyledons):
             else:
                 print(f"Error: create_lobules")
                 print(f"Unrecognised lobule_foronoi_type: {lobule_foronoi_type}")
-                sys.exit(-1)
-                
+                # sys.exit(-1)
+                raise Exception(f"Unrecognised lobule_foronoi_type: {lobule_foronoi_type}")
+
             sub_voronoi = foronoi.Voronoi(pgon)
             sub_voronoi.create_diagram(points = \
                     f_lobule_pts[0:f_no_lobule_pts[placentone_no]+1,:,placentone_no])
             no_lobules_to_add = f_no_lobule_pts[placentone_no]
             no_lobules = no_lobules + f_no_lobule_pts[placentone_no]
             
-            vis = foronoi.Visualizer(sub_voronoi, canvas_offset=0)
-            vis.plot_sites(show_labels=True)
-            vis.plot_edges(show_labels=True)
-            vis.plot_vertices()
-            vis.plot_border_to_site()
-            vis.show()
+            # frni.visualise_voronoi(sub_voronoi)
 
         cut_from_voronoi(model, \
             f_lobule_pts[0:f_no_lobule_pts[placentone_no]+1,:,placentone_no], \
@@ -494,7 +498,7 @@ def create_cotyledon_o(model,points,voronoi_diagram):
         cotyledons.append(frni_placentone)
         cotyledons_shrunk.append(frni_placentone_shrunk)
 
-    plots.plot_placentone_list(points,cotyledons)
+    # plots.plot_placentone_list(points,cotyledons)
     
     return [cotyledons,cotyledons_shrunk]
 
@@ -540,20 +544,16 @@ def create_lobules2(model,cotyledons):
             else:
                 print(f"Error: create_lobules")
                 print(f"Unrecognised lobule_foronoi_type: {lobule_foronoi_type}")
-                sys.exit(-1)
+                # sys.exit(-1)
+                raise Exception(f"Unrecognised lobule_foronoi_type: {lobule_foronoi_type}")
                 
             sub_voronoi = foronoi.Voronoi(pgon)
             sub_voronoi.create_diagram(points = \
                     f_lobule_pts[0:f_no_lobule_pts[placentone_no]+1,:,placentone_no])
             no_lobules_to_add = f_no_lobule_pts[placentone_no]
             no_lobules = no_lobules + f_no_lobule_pts[placentone_no]
-            
-            vis = foronoi.Visualizer(sub_voronoi, canvas_offset=0)
-            vis.plot_sites(show_labels=True)
-            vis.plot_edges(show_labels=True)
-            vis.plot_vertices()
-            vis.plot_border_to_site()
-            vis.show()
+
+            # frni.visualise_voronoi(sub_voronoi)
 
         for site_no in range(0,no_lobules_to_add):
 
