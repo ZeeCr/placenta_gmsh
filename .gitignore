@@ -47,4 +47,6 @@ __pycache__
 .ipynb_checkpoints
 *.pyc
 .env
+
 placenta_main_debug.py
+gmsh_python_api.py
