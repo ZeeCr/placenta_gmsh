@@ -6,7 +6,7 @@ The geometry creation heavily depends on OCC through Gmsh and various other geom
 
 Set up Python environment via 
 ```
-pip install -r requirements.txt'
+pip install -r requirements.txt
 ```
 
 Configure placenta_const.py parameters, e.g. probability of a vein appearing in a lobule, mesh size in IVS etc.
