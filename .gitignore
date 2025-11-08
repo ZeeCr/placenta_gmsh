@@ -31,7 +31,6 @@
 ########
 __pycache__
 .ipynb_checkpoints
-meshes
 
 # OS generated files #
 ######################
@@ -42,3 +41,10 @@ meshes
 .Trashes
 ehthumbs.db
 Thumbs.db
+
+# USER #
+__pycache__
+.ipynb_checkpoints
+*.pyc
+.env
+placenta_main_debug.py

@@ -12,20 +12,27 @@ large_geom_tol = 1.0e-2
 open_gmsh = 1
 
 char_length = 10.0
-######################## USER INFO ########################
-#placenta_radius = 255.0/2.0
+
+###############################################################
+########################## USER INFO ##########################
+###############################################################
+
+## Quantities in mm, non-dim by char_length
+
 placenta_radius = 90.7 / char_length
 placenta_volume = 428e3 / char_length**3 #mm^3
-#placenta_height = 53.0
 
-placentone_radius = 40.0/(2.0*char_length)
+# Cotyledon wall thickness
 placentone_wall_thickness = 2.0 / char_length
 
+# Mean height of cotyledon septal walls
 placentone_removal_height = 18.0 / char_length
 
+# Lobule wall thickness
 lobule_wall_thickness = placentone_wall_thickness/1.5
+
+# Mean height of lobule septal walls
 lobule_removal_height = placentone_removal_height/2.0
-lobule_foronoi_type = 'standard' # ConcavePolygon ('concave') or Polygon ('standard')
 
 no_random_placentones = 6 #If fixed_cotyledon_pts True, this is not used; else no_placentones = <----
 no_inner_placentones = 2 #Unused now?
@@ -60,8 +67,6 @@ marginal_vein_height_from_top = 3.5 / char_length #marginal_vein_height = placen
 vein_length = (3.0/10.0)*(placentone_wall_thickness*2.0)
 fillet_radius = 0.75*septal_artery_radius # Radius of septal veins fillet, total radius = vein_radius+fillet_radius
 
-
-
 # Cylinder above spherical cap info
 top_cyl_height = 2*marginal_sinus_vein_radius #mm
 
@@ -75,6 +80,7 @@ inner_sub_radius = 0.5*placenta_radius
 # Removed that as of 08/01/25 but commented out values still there
 placenta_voronoi_outer_radius_offset = 0.33*placenta_radius/3.0
 
+# Function which determines equidistributed position of marginal sinus veins (randomised later)
 outer_angle_variance = lambda no_p : 2.0*math.pi/(1.0*(no_p-no_inner_placentones))
 
 # Artery bias
@@ -85,7 +91,10 @@ septal_vein_bias = 2
 marginal_sinus_vein_bias = 3
 ######################## END OF USER INFO ########################
 
-######################## MESH SIZE ########################
+###############################################################
+########################## MESH SIZE ##########################
+###############################################################
+
 DomSize = 5.0 / char_length #Large flow domain size
 InnerWallDomSize = DomSize/5.0
 OuterWallDomSize = InnerWallDomSize*2.0
@@ -103,8 +112,12 @@ mesh_transition_length = 4.0 / char_length#mesh_offset_length
 
 
 
-
+###############################################################
 ######################## FIXED OBJECTS ########################
+###############################################################
+# All of this info. is printed out when a mesh is being created
+# High prio to-do to just create JSON file for every created mesh and store in subdir
+
 placenta_id = 'C'
 
 fixed_cotyledon_pts = True
@@ -368,7 +381,7 @@ if (stored_cotyledon_wall_heights):
     print(f"stored_cotyledon_wall_heights == True but not implemented yet for node_set height objs")
     sys.exit(-1)    
     if (placenta_id == 'A'):
-        cotyledon_wall_heights = [ \
+        cotyledon_wall_heights[:] = [ \
             14.0,14.0,14.0,14.0,14.0,14.0]
     elif (placenta_id == 'C'):
         cotyledon_wall_heights[:] = [ \
@@ -398,10 +411,11 @@ lobule_wall_heights[:] = cotyledon_wall_heights[:]/2.0
 ######################## INITIALISE QUANTITIES ########################
 tol = 1.0e-4 / char_length
 
+lobule_foronoi_type = 'standard' # ConcavePolygon ('concave') or Polygon ('standard')
+
 top_cyl_vol = math.pi*top_cyl_height*placenta_radius**2
 
 placenta_height_roots = numpy.roots([1.0,0.0,3.0*placenta_radius**2,-6.0*placenta_volume/math.pi]) #V = (1/6)*pi*h*(3r^2 + h^2), spherical cap only
-#placenta_height_roots = numpy.roots([1.0,0.0,3.0*placenta_radius**2,6.0*(top_cyl_height*placenta_radius**2 - placenta_volume/math.pi)]) #V = (1/6)*pi*h*(3r^2 + h^2)
 placenta_height = numpy.real(placenta_height_roots[2])
 
 placentone_height = placenta_height-(1.0/char_length)
@@ -426,9 +440,7 @@ mesh_offset_length = 1.0e-1 / char_length
 # Cahgnes whether in / on wall due to funnel shape on wall
 wall_vein_buffer_on_wall = septal_vein_radius+1.4*septal_vein_funnel_radius
 wall_vein_buffer_in_wall = 1.4*septal_vein_radius
-# Track number of inlets, outlets
-#no_inlets = 0
-#no_outlets = 0
+
 ####################### END OF INITIALISE QUANTITIES #######################
 
 

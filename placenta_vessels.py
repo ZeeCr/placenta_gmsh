@@ -755,7 +755,12 @@ def create_septal_veins(model,no_cotyledon,cotyledons, \
             face_pt_on_placenta = copy.deepcopy(face_cyl_end_pt)
             face_pt_on_placenta[0:2] = face_cyl_end_pt[0:2] - length*norm_dir[0:2]
             
+            # Needs to be fixed
             if (adjust_stored_septal_vein_height):
+                
+                print("ERROR: calc_septal_vein_height args need to be fixed")
+                sys.exit(-1)
+                
                 face_pt_on_placenta[2] = fns.calc_septal_vein_height( \
                     face_pt_on_placenta[0:2],face_cyl_end_pt[0:2],adjust_septal_height_ratio)
                 face_cyl_end_pt[2] = face_pt_on_placenta[2]

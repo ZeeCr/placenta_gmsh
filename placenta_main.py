@@ -86,19 +86,10 @@ def main():
     ####################### END OF INITIALISE QUANTITIES #######################
 
     ###################### REMOVAL OBJECTS #######################
-    # Debug box, whole domain
-    #Box(1000) = {-BasalPlateSphereRadius*2,-BasalPlateSphereRadius*2,-BasalPlateSphereRadius*2,
-    #                BasalPlateSphereRadius*4,BasalPlateSphereRadius*4,BasalPlateSphereRadius*4}
-
     # Box that cuts off initial sphere past placenta_height
     model.occ.addBox(-initial_sphere_radius,-initial_sphere_radius,initial_sphere_radius*2, \
                     initial_sphere_radius*2,initial_sphere_radius*2,-initial_sphere_radius*2+placenta_height, \
                     1000)
-    # Cylinder for straight top part
-    #model.occ.addCylinder(0.0,0.0,placenta_height, \
-    #                        0.0,0.0,top_cyl_height, \
-    #                        placenta_radius,1001)
-
     ###################### END OF REMOVAL OBJECTS #######################
 
     print(f"Placenta height: {placenta_height}")
@@ -108,27 +99,9 @@ def main():
     print(f"cotyledon_wall_heights: {numpy.array2string(cotyledon_wall_heights, separator=',')}")
     print(f"lobule_wall_heights: {numpy.array2string(lobule_wall_heights, separator=',')}")
 
-    #Sphere(1) = {0.0,0.0,initial_sphere_radius,initial_sphere_radius}
     model.occ.addSphere(*initial_sphere_centre,initial_sphere_radius,1)
 
-    # model.occ.cut([(3,1)], [(3,1000)], tag=2, removeObject=True, removeTool=True)  - omitting tag=.. means that the smallest tag no. that is deleted is taken
-    # Putting tag=lowest_tag_no gives error
     model.occ.cut([(3,1)], [(3,1000)])
-    #model.occ.fuse([(3,1)], [(3,1001)])
-
-
-    '''
-    # Debug
-    field_no = 100
-    model.mesh.field.add("Constant",field_no)
-    model.mesh.field.setNumber(field_no,"IncludeBoundary",1)
-    model.mesh.field.setNumber(field_no,"VIn",DomSize/2.0)
-    model.mesh.field.setNumber(field_no,"VOut",DomSize/2.0)
-    model.mesh.field.setNumbers(field_no,"VolumesList",[1,2,3,4,5,6,7,8,9,10])
-    field_list = field_list + [field_no]
-    model.mesh.field.setAsBackgroundMesh(100)
-    '''
-
 
     points = shape.setup_voronoi_pts()
     v = shape.setup_voronoi_diagram(points)
@@ -143,32 +116,6 @@ def main():
     #cotyledon_node_set.print_members()
 
     model.occ.synchronize()
-
-    # -------------- DEL
-    field_list = []
-
-    field_no = 100
-    model.mesh.field.add("Constant",field_no)
-    model.mesh.field.setNumber(field_no,"IncludeBoundary",1)
-    model.mesh.field.setNumber(field_no,"VIn",DomSize)
-    model.mesh.field.setNumber(field_no,"VOut",DomSize)
-    model.mesh.field.setNumbers(field_no,"VolumesList",[1])
-    field_list = field_list + [field_no]
-
-    [model,field_list] = fields.refine_cot_walls(model,cotyledon_edge_set,field_list, \
-        inner_mesh_size = OuterWallDomSize, outer_mesh_size = DomSize, buffer_multiplier = 1.0,field_start = 601)
-    # [model,field_list] = fields.refine_cot_walls(model,cotyledon_edge_set,field_list, \
-    #     inner_mesh_size = OuterWallDomSize, outer_mesh_size = DomSize, buffer_multiplier = 1.5,field_start = 701)
-
-    model.mesh.field.add("Min",900)
-    model.mesh.field.setNumbers(900,"FieldsList",field_list)
-    model.mesh.field.setAsBackgroundMesh(900)
-
-    model.occ.synchronize()
-    gmsh.fltk.run()
-    sys.exit(-2)
-    # -----------------
-
 
     [lobule_node_set,lobule_edge_set,no_lobules,lobules, \
             lobule_node_set_per_cotyledon,lobule_edge_set_per_cotyledon] = \
@@ -199,17 +146,12 @@ def main():
             cotyledon_edge_set,no_outlets,outlet_faces,lobule_node_set_per_cotyledon)
 
     model.occ.synchronize()
-    # gmsh.fltk.run()
-
 
     ##################################################################
     ###################### SEPTAL WALL VEINS #########################
     ##################################################################
 
     model.occ.synchronize()
-    #gmsh.fltk.run()
-
-
     
     start = time.time()
     regions.create_ellipsoid_cavities(model,cavities)
@@ -217,13 +159,6 @@ def main():
     print(f"Time to compute ellipsoid cavities: {end-start}")
 
     print(f"Creating septal fragments")
-
-    '''
-    model.occ.synchronize()
-    gmsh.fltk.run()
-    gmsh.finalize()
-    sys.exit(-2)
-    '''
 
     start = time.time()
     [model,surf_COMs_to_ignore] = regions.create_septal_fragment(model,outlet_faces,surf_COMs_to_ignore)
@@ -285,12 +220,7 @@ def main():
                 ##################### ADD NODES TO OUITLET CENTRES #####################   
                 
                 print("outlet_face_no ",outlet_face_no," corresponds to surface ",surf_no)
-                break    
-        
-
-
-
-
+                break
         
     ######################## PHYSICAL GROUP SETUP ########################
 
@@ -380,17 +310,9 @@ def main():
     no_no_slip_surfs = len(surface_label_pairs_no_slip)
     surface_nos_no_slip = [value[1] for value in surface_label_pairs_no_slip]
 
-
-
-
     model.addPhysicalGroup(2, surface_nos_no_slip, 1, "No slip")
 
-
-
-
-
     model.addPhysicalGroup(3, [pair[1] for pair in model.occ.getEntities(3)], 1, "Domain")
-
 
     # Set the baseline, coarse mesh size
     field_list = []
@@ -539,7 +461,8 @@ def main():
         
     [model,field_list] = fields.refine_apex_cavity(model,no_cavities,cavities,field_list)
 
-    [model,field_list] = fields.refine_cot_walls(model,cotyledon_edge_set,field_list)
+    [model,field_list] = fields.refine_cot_walls(model,cotyledon_edge_set,field_list, \
+        inner_mesh_size = OuterWallDomSize, outer_mesh_size = DomSize, buffer_multiplier = 1.5,field_start = 601)
 
     # Calculate the min of all
     model.mesh.field.add("Min",900)

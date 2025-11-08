@@ -75,7 +75,7 @@ def get_no_eles_in_mesh(gmsh):
     
     return no_eles
 
-def store_mesh(gmsh,mesh_prefix) -> None:
+def store_mesh(gmsh,mesh_prefix):
     
     default_err_return = [-1,-1,-1]
     

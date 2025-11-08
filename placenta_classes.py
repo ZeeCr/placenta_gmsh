@@ -1,4 +1,11 @@
 import sys
+"""!
+@file placenta_classes.py
+@brief Data structures for placenta geometry generation using GMSH.
+This module provides classes to represent 
+placenta geometry objects, bounding boxes, faces, (ellipsoid-shaped) central 
+cavities and global node/edge structures.
+""" 
 import math
 import copy
 
@@ -8,13 +15,41 @@ import placenta_fns as fns
 
 from placenta_const import circ_eval
 
-# Python classes are horrible - default members defined outside __init__ are mutable attribute values (aside from immutable variables?), 
-# the values are class values rather than object values (change one value in one instance, it changes every class' value)
-# This is despite the 'id' (memory address) of the class object being different for both class objects
-# For immutable variable types, their initial memory address is the same but on changing instance value, the memory address changes
-# numpy arrays are mutable by default, hence needing to call numpy.copy or whatever
-
 class Placentone:
+    """! @brief Class for a single (convex) polygon (representing cotyledon/lobule) and its labels.
+    Members:
+    - int no_vertices: number of local polygon vertices.
+    - int no_edges: number of local edges (typically equals no_vertices for closed polygons).
+    - numpy.ndarray vertices: shape (no_vertices, 2) storing local XY coordinates.
+    - numpy.ndarray edges: shape (no_edges, 2) storing local vertex index pairs that form edges.
+    - numpy.ndarray centroid: 2-element array giving a reference centroid (not automatically updated).
+    - numpy.ndarray global_vertex_nos: length no_vertices map local -> global (GMSH) vertex ids.
+    - numpy.ndarray global_edge_nos: length no_edges map local -> global (GMSH) edge ids.
+    - int lineloop_no: optional GMSH line loop id.
+    - int surface_no: optional GMSH surface id.
+    - int volume_no: optional GMSH volume id.
+    - int boundary_cell: flag indicating boundary status (0 interior, non-zero boundary).
+    Methods:
+    - Placentone(no_vertices, no_edges)
+        Constructor that allocates arrays for vertices, edges and mappings.
+    - create_copy() -> Placentone
+        Create and return a shallow copy of the Placentone with duplicated array data.
+        The new instance contains copies of arrays so modifications to the copy will not
+        change the original arrays.
+    - shrink_placentone_fixed_dist(dist, model) -> None
+        Move each vertex a fixed distance along the inward bisector at the vertex (local
+        inward displacement). The centroid field is NOT updated by this operation; callers
+        that require an accurate centroid must recompute it after shrinking.
+    Parameters:
+        - dist (float): signed distance to move each vertex (positive moves outward along
+            the computed bisector direction, negative moves inward depending on convention).
+        - model (object): kept for API compatibility with calling code; not used internally.
+    Notes:
+        - Uses external helper functions (e.g., normalise_vector) to compute unit directions.
+        - Preserves local vertex indexing and edge topology; only the 2D coordinates are modified.
+    - get_vertices_edges() -> [no_vertices, no_edges, vertices, edges]
+        Return a compact tuple/list containing local counts and arrays needed by other routines.
+    """
     def __init__(self,no_vertices,no_edges) -> None:
         self.no_vertices = no_vertices
         self.no_edges = no_edges
@@ -54,6 +89,7 @@ class Placentone:
         
     # Reduce vertices' distance from centroid by fixed value 
     # NOTE centroid does not give the actual centroid of this shrunk placentone anymore
+    # To-do add function to recalculate on-demand
     def shrink_placentone_fixed_dist(self,dist,model) -> None:
         
         orig_vertices = numpy.copy(self.vertices)
@@ -84,6 +120,8 @@ class Placentone:
             c_unit = fns.normalise_vector(2,c)
             self.vertices[vertex_no,:] = orig_vertices[vertex_no,:]+dist*numpy.copy(c_unit)
             
+        return None
+            
     def get_vertices_edges(self):
         
         no_vertices = self.no_vertices
@@ -94,9 +132,25 @@ class Placentone:
         return [no_vertices,no_edges,vertices,edges]
 
         
-            
-            
 class BoundingBox:
+    """! @brief Axis-aligned bounding box with optional association to geometry entity identifiers.
+    Members:
+    - float xmin, ymin, zmin, xmax, ymax, zmax: extents of the box.
+    - tuple bound_tuple: (xmin, ymin, zmin, xmax, ymax, zmax).
+    - str entity_type: textual label for the contained entities (e.g., "surface", "volume").
+    - numpy.ndarray entity_array: integer array of entity ids associated with this box.
+    Methods:
+    - BoundingBox()
+    Constructor initialises bounds and placeholders.
+    - update_bounds(bb_arr) -> None
+    Set the bounding extents using a 6-element iterable (xmin, ymin, zmin, xmax, ymax, zmax).
+    - update_entities(entity_type="none", entity_array=-1) -> None
+    Store associated entity metadata. A copy of entity_array is stored.
+    - print_bounds() -> None
+    Print a human-readable representation of the extents (debug helper).
+    - print_entities() -> None
+    Print a human-readable representation of stored entity metadata (debug helper).
+    """
     def __init__(self) -> None:
         self.xmin = 0.0
         self.ymin = 0.0
@@ -184,7 +238,26 @@ class Face:
    ^centre
 <-----> minor axis
 '''
+# Class to store central cavity (ellipsoid) info.
 class Cavity:
+    """! @brief Class for holding ellipsoid-shaped central cavity
+    Members:
+    - numpy.ndarray centre: 3D centre of the cavity.
+    - numpy.ndarray orientation_normal: 3D unit vector indicating the major axis direction.
+    - float minor_axis: minor axis length (or radius) perpendicular to major axis.
+    - float major_axis: major axis length (along orientation_normal).
+    - numpy.ndarray COM: centre-of-mass or auxiliary reference point.
+    Methods:
+    - Cavity()
+        Constructor initialises members to None.
+    - update_cavity(centre=None, orientation_normal=None, minor_axis=None, major_axis=None, COM=None) -> None
+        Update stored parameters; only non-None arguments are applied and copied.
+    - update_major_axis(z_plane_height, height_factor) -> None
+        Set major_axis by computing distance from the cavity centre along orientation_normal
+        to the horizontal plane z = z_plane_height and dividing by height_factor.
+    Errors:
+        - Exits if required members aren't initialised on construction
+    """
     def __init__(self) -> None:
         self.centre = None
         self.orientation_normal = None
@@ -216,16 +289,90 @@ class Cavity:
         self.update_cavity(major_axis = dist/height_factor)       
         
             
-    # Find intersection point of normal with plate        
+    # Find intersection point of normal with plate
+    # Only called from functions which already check data initialisation      
     def __calc_dist_to_plate(self,z_plane_height):
-        # v = centre + s*normal, v_z = z_plane_height
-        s = (z_plane_height - self.centre[2])/self.orientation_normal[2]
-        intersection_pt = self.centre + s*self.orientation_normal
+            
+        s = (z_plane_height - self.centre[2])/self.orientation_normal[2] # type: ignore
+        # intersection_pt = self.centre + s*self.orientation_normal
         
         return s
     
 class NodeSet:
-    
+    """! @brief Global unique node (vertex) class for representing collection of polygons.
+    Purpose:
+    - Deduplicate vertices across many placentone polygons and build a global node list.
+    - Provide storage and conversion utilities for per-node wall heights:
+            - abs_wall_height: a stochastic "absolute" height (prior to spherical-cap correction).
+            - rel_wall_height: height relative to a local base/bottom surface (after interior fraction).
+            - nodal_wall_height: actual z coordinate of wall = bottom_surf_z + rel_wall_height.
+    - Provide mapping from each placentone's local vertex indices to global node indices.
+    Members:
+    - int dim: spatial dimension (usually 2 as Voronoi diagram set up on 2D plane).
+    - str v_type: semantic container type (e.g., 'cotyledon' or 'lobule').
+    - int no_nodes: populated number of unique nodes.
+    - numpy.ndarray node: shape (no_nodes, dim) coordinates of each unique global node.
+    - numpy.ndarray no_cell_nodes: integer counts of nodes per cell.
+    - numpy.ndarray cell_nodes: mapping shape (no_cells, max_no_nodes) storing global node indices
+        per cell (unused entries typically set to -1).
+    - numpy.ndarray abs_wall_height: per-node absolute heights (stochastic source).
+    - numpy.ndarray rel_wall_height: per-node relative heights (after spherical-cap fractioning).
+    - numpy.ndarray nodal_wall_height: per-node actual z coordinate of the wall surface.
+    Key methods:
+    - NodeSet(dim, v_type)
+        Constructor.
+    - print_members() -> None
+        Debug printing of each node and any populated height arrays.
+    - set_node(node_no, node) -> None
+        Set coordinates of a global node. Performs dimension checks.
+    - set_all_random_heights(main, variance) -> None
+        Populate abs_wall_height with random values around `main` using +/- `variance`.
+    - set_all_random_heights_radius_dependent(inner_main, inner_variance,
+                                                                                        outer_main, outer_variance, radius) -> None
+        Per-node abs_wall_height is chosen based on whether node lies within a circular radius
+        (uses circ_eval). Inner nodes sample around inner_main; outer nodes sample around outer_main,
+        with outer values forced positive by design.
+    - set_all_random_heights_negative(inner_main, inner_variance) -> None
+        Populate abs_wall_height using only negative variance about the provided main value.
+    - set_abs_wall_heights(inner_main, inner_variance, outer_main, outer_variance, outer_cutoff) -> None
+        High-level initializer for abs_wall_height using radius-dependent randomization.
+        Behavior depends on v_type (cotyledon vs lobule) and may call lobule-specific scaling.
+    - rescale_lobule_abs_heights_with_cutoff(outer_cutoff) -> None
+        Rescale lobule abs_wall_height values inside the cutoff using the spherical interior fraction
+        to convert to a consistent relative internal height representation.
+    - set_rel_and_nodal_wall_heights_cutoff(cutoff) -> None
+        Convert stored abs_wall_height to rel_wall_height and nodal_wall_height by applying the
+        spherical-cap interior fraction for nodes inside `cutoff`. Nodes outside the cutoff use
+        abs_wall_height directly as the relative height. Requires abs_wall_height to be populated.
+    - calc_rel_wall_height(node_no) -> float
+        Compute relative wall height for a node as abs_wall_height * sphere_interior_fraction_at_xy.
+    - calc_abs_wall_height(node_no) -> float
+        Inverse operation: compute an absolute wall height given stored rel_wall_height and the
+        spherical interior fraction at the node location.
+    - calc_rel_wall_height_with_cutoff(node_no, cutoff_r) -> float
+        Conditional relative height: if node lies outside cutoff_r returns abs_wall_height,
+        else returns abs_wall_height scaled by the spherical interior fraction.
+    - set_from_placentone_obj(placentone_obj) -> None
+        Build the global node list by deduplicating vertices across an iterable of Placentone objects
+        and then populate the per-cell global node mapping via an internal helper.
+    - calc_cell_min_node_height_within_cutoff(cell_no, cutoff_r) -> float
+        Return minimum rel_wall_height among nodes of the specified cell that are inside cutoff_r.
+    - calc_cell_min_node_height_outside_cutoff(cell_no, cutoff_r) -> float
+        Return minimum rel_wall_height among nodes of the specified cell that are outside cutoff_r.
+    - calc_avg_rel_wall_height_within_cutoff(cutoff) -> float
+        Average rel_wall_height across all nodes within the cutoff radius.
+    Private helpers:
+    - __create_abs_wall_height_storage(), __create_rel_wall_height_storage(), __create_nodal_wall_height_storage()
+        Lazily allocate the respective arrays.
+    - __set_cell_global_node_nos(placentone_obj) -> None
+        Construct cell_nodes and no_cell_nodes arrays by matching placentone vertex coordinates to global nodes
+        using points_near helper comparisons.
+    Notes:
+    - Several functions depend on external helpers and constants for tests
+    - Many methods perform exits on errors
+    - All functions assume set_from_placentone_obj already called
+    - There are quite a few different node height functions, most were for testing during development
+    """
     def __init__(self,dim,v_type) -> None:
         self.dim = dim
         
@@ -245,6 +392,48 @@ class NodeSet:
         # This is the actual z value of the wall - buttom_surf_z + rel_wall_height
         self.nodal_wall_height = None
         
+    # This should really be the init constructor, but instead I just call it after creating the object
+    def set_from_placentone_obj(self,placentone_obj) -> None:
+        
+        no_global_vertices = 0
+        global_vertices = []
+        
+        for cell in placentone_obj:
+            
+            [no_vertices,no_edges,vertices,edges] = \
+                cell.get_vertices_edges()
+                
+            for vertex_no in range(0,no_vertices):
+                
+                already_added = False
+                
+                for global_v_no in range(0,no_global_vertices):
+                    
+                    if (fns.points_near( \
+                            global_vertices[global_v_no],vertices[vertex_no,:])):
+                        
+                        already_added = True
+                        break
+                        
+                if (not(already_added)):
+                    
+                    global_vertices.append(vertices[vertex_no,:])
+                    no_global_vertices = no_global_vertices + 1
+        
+        if (no_global_vertices < 2):
+            print("ERROR: set_from_foronoi_obj")
+            print("Too few vertices")
+            sys.exit(-1) 
+            
+        self.no_nodes = no_global_vertices
+        self.node = numpy.empty((self.no_nodes,self.dim))
+        for count,global_v in enumerate(global_vertices):
+            self.set_node(count,global_v)
+        
+        self.__set_cell_global_node_nos(placentone_obj)
+        
+        return None
+    
     def print_members(self) -> None:
         for i in range(0,self.no_nodes):
             print(f"Vertex {i} = \
@@ -357,10 +546,11 @@ class NodeSet:
         # If cotyledon, set all random heights
         # If lobule, set abs_wall_height to be the same as rel_wall_height
         #   and then scale for consistency
+        # No longer used as originally intended hence the passes
         if (self.v_type == 'cotyledon'):
-            True
+            pass
         elif (self.v_type == 'lobule'):
-            True#self.rescale_lobule_abs_heights_with_cutoff(outer_cutoff)
+            pass #self.rescale_lobule_abs_heights_with_cutoff(outer_cutoff)
         else:
             print("ERROR: set_abs_wall_heights")
             print(f"Unrecognised v_type {self.v_type}")
@@ -566,47 +756,6 @@ class NodeSet:
             avg_height = avg_height / counter
         
         return avg_height
-            
-    def set_from_placentone_obj(self,placentone_obj) -> None:
-        
-        no_global_vertices = 0
-        global_vertices = []
-        
-        for cell in placentone_obj:
-            
-            [no_vertices,no_edges,vertices,edges] = \
-                cell.get_vertices_edges()
-                
-            for vertex_no in range(0,no_vertices):
-                
-                already_added = False
-                
-                for global_v_no in range(0,no_global_vertices):
-                    
-                    if (fns.points_near( \
-                            global_vertices[global_v_no],vertices[vertex_no,:])):
-                        
-                        already_added = True
-                        break
-                        
-                if (not(already_added)):
-                    
-                    global_vertices.append(vertices[vertex_no,:])
-                    no_global_vertices = no_global_vertices + 1
-        
-        if (no_global_vertices < 2):
-            print("ERROR: set_from_foronoi_obj")
-            print("Too few vertices")
-            sys.exit(-1) 
-            
-        self.no_nodes = no_global_vertices
-        self.node = numpy.empty((self.no_nodes,self.dim))
-        for count,global_v in enumerate(global_vertices):
-            self.set_node(count,global_v)
-        
-        self.__set_cell_global_node_nos(placentone_obj)
-        
-        return None
             
 class EdgeSet:
     

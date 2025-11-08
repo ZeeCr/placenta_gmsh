@@ -30,9 +30,13 @@ def cal_centroid(no_pts,pts):
     
     return centroid
 
-# Centre of mass of convex polygon based on subdividing polygon from centroid
 def cal_centre_polygon(no_vertices,vertices):
-
+    """
+    @brief Centre of mass of convex polygon based on subdividing polygon from centroid
+    @param no_vertices Number of vertices of the polygon
+    @param vertices Array of vertex coordinates
+    @return Centroid coordinate of the polygon (2D)
+    """
     polygon_area = 0.0
     weighted_sum = numpy.zeros(2)
     
@@ -63,7 +67,13 @@ def cal_centre_polygon(no_vertices,vertices):
     return (weighted_sum/polygon_area)
 
 def uniform_points_on_circle(no_pts,r,offset=0.0):
-
+    """
+    @brief Place (no_pts) points uniformly on circle of radius r
+    @param no_pts Number of points
+    @param r Radius of circle
+    @param offset Angular offset (radians)
+    @return Array of points (no_pts x 2)
+    """
     pts = numpy.zeros([no_pts,2])
     
     for pt_no in range(0,no_pts):
@@ -74,9 +84,13 @@ def uniform_points_on_circle(no_pts,r,offset=0.0):
         
     return pts
 
-# Test function - place no_pts-1 points at distance r from the centre, 1 point in centre
 def uniform_points_in_unit_circle_with_centre(no_pts,r):
-
+    """
+    @brief Test function - place no_pts-1 points at distance r from the centre, 1 point in centre
+    @param no_pts Total number of points
+    @param r Radius for outer points
+    @return Array of points (no_pts x 2)
+    """
     pts = numpy.zeros([no_pts,2])
     pts[0,:] = [0.0,0.0]
     
@@ -89,9 +103,12 @@ def uniform_points_in_unit_circle_with_centre(no_pts,r):
         
     return pts
 
-
 def convert_foronoi_site(site):
-
+    """
+    @brief Convert foronoi object to arrays of vertices and edges
+    @param site Foronoi site object
+    @return [no_vertices,no_edges,vertices,edges]
+    """
     no_vertices = len(site.vertices())
     no_edges = len(site.borders())
 
@@ -134,11 +151,17 @@ def convert_foronoi_site(site):
         
     return [no_vertices,no_edges,vertices,edges]
 
-# Checks every edge and whether the 2 points lie on opposite sides of circle
-# Returns True if intersects with 2 edges, False else
-# Assumes centre of circle is origin
 def does_cell_intersect_circle(no_vertices,no_edges,vertices,edges,circle_r):
-    
+    """
+    @brief Checks every edge and whether the 2 points lie on opposite sides of circle
+    @details Returns True if intersects with 2 edges, False else. Assumes centre of circle is origin.
+    @param no_vertices Number of vertices
+    @param no_edges Number of edges
+    @param vertices Vertex coordinates
+    @param edges Edge connectivity array
+    @param circle_r Circle radius
+    @return [bool, intersection_edges]
+    """
     sum_val = 0
     intersection_edges = numpy.zeros(2, dtype=int)
     
@@ -168,9 +191,13 @@ def does_cell_intersect_circle(no_vertices,no_edges,vertices,edges,circle_r):
         #print("Not obvious whether intersect or not")
         return [False,intersection_edges]
 
-
 def check_orientation_of_polygon(nodes):
-    
+    """
+    @brief Get oriented area of polygon then check if clockwise or anticlockwise
+    @details Returns nodes reversed if they are clockwise so output is anticlockwise.
+    @param nodes Array of polygon node coordinates (N x 2)
+    @return nodes in anticlockwise order
+    """
     if (nodes.shape[0] < 3):
         print("Error: check_orientation_of_polygon")
         print("Not enough nodes to form polygon")
@@ -194,10 +221,13 @@ def check_orientation_of_polygon(nodes):
         reversed_nodes = reversed_nodes[::-1]
         
     return reversed_nodes            
-            
-# [0,1],[1,2],[n,0], .. etc
-def setup_standard_loop_ordering(no_vertices):
 
+def setup_standard_loop_ordering(no_vertices):
+    """
+    @brief [0,1],[1,2],[n,0], .. etc
+    @param no_vertices Number of vertices
+    @return loop array of shape (no_vertices,2)
+    """
     loop = numpy.empty((no_vertices,2),dtype = int)
     
     for i in range(0,no_vertices - 1):
@@ -209,11 +239,19 @@ def setup_standard_loop_ordering(no_vertices):
     
     return loop
 
-# Add a vertex after add_idx
-# Assumes [no_v,dim] index ordering - probably error if pass in array not like this
 def add_vertex_after_idx_to_cell(add_idx,orig_no_vertices,orig_no_edges, \
         orig_vertices,orig_edges,pt_to_add):
-    
+    """
+    @brief Add a vertex after add_idx
+    @details Assumes [no_v,dim] index ordering - probably error if pass in array not like this
+    @param add_idx Index after which to add vertex
+    @param orig_no_vertices Original number of vertices
+    @param orig_no_edges Original number of edges
+    @param orig_vertices Original vertices array
+    @param orig_edges Original edges array
+    @param pt_to_add Point coordinates to add
+    @return [no_vertices,no_edges,temp_vertices,temp_edges]
+    """
     pt_dim = len(orig_vertices[0,:])
     
     no_vertices = orig_no_vertices + 1
@@ -255,12 +293,18 @@ def add_vertex_after_idx_to_cell(add_idx,orig_no_vertices,orig_no_edges, \
         
     return [no_vertices,no_edges,temp_vertices,temp_edges]
     
-# Assumes centre of circle is origin   
-# Only vertices need to be changed here, edges by construction always s.t.
-# e1 = [0,1], e2 = [1,2], ... 
 def reorder_vertices_first_edge_intersects(no_vertices,no_edges,vertices,edges, \
         circle_r):
-    
+    """
+    @brief Assumes centre of circle is origin   
+    @details Only vertices need to be changed here, edges by construction always s.t. e1 = [0,1], e2 = [1,2], ... 
+    @param no_vertices Number of vertices
+    @param no_edges Number of edges
+    @param vertices Vertex coordinates
+    @param edges Edge connectivity
+    @param circle_r Circle radius
+    @return [vertices,edges]
+    """
     temp_vertices = numpy.zeros((no_vertices,2))
     temp_edges = numpy.zeros((no_edges,2),dtype=int)
     
@@ -308,10 +352,17 @@ def reorder_vertices_first_edge_intersects(no_vertices,no_edges,vertices,edges, 
     return [vertices,edges]
 
 
-# Assumes points have been reordered s.t. the edge intersection with origin in circle and target out circle
-# is the first edge
 def del_vertices_between_intersection_vertices(no_vertices,no_edges,vertices,edges,circle_r):
-
+    """
+    @brief Assumes points have been reordered s.t. the edge intersection with origin in circle and target out circle is the first edge
+    @details Deletes intermediate vertices between intersection vertices if necessary.
+    @param no_vertices Number of vertices
+    @param no_edges Number of edges
+    @param vertices Vertex coordinates
+    @param edges Edge connectivity
+    @param circle_r Circle radius
+    @return [no_vertices,no_edges,vertices,edges]
+    """
     vertex_intersect_no = -1
     for edge_no in range(1,no_edges):
         
@@ -354,14 +405,19 @@ def del_vertices_between_intersection_vertices(no_vertices,no_edges,vertices,edg
 
     return [no_vertices,no_edges,vertices,edges]
 
-# Assumes vertices ordered clockwise, only two vertices outside circle, circle centred (0,0)
-# DO NOT USE INTERSECTION_EDGES FOR ARRAY INDEXING, I haven't shifted the entries since reordering vertices
-# I don't really understand why the dy >= 0 if condition works, but it seems to 
-# Change 30/11/23: more vertices in between intersection ones
-# Done as follows - intersection edge vertices are moved along their line
-# Intermediate ones are moved along the line between it and centre of circle (origin)
 def shrink_outside_vertices(no_vertices,no_edges,vertices,edges,circle_r,intersection_edges):
-    
+    """
+    @brief Assumes vertices ordered clockwise, only two vertices outside circle, circle centred (0,0)
+    @details DO NOT USE INTERSECTION_EDGES FOR ARRAY INDEXING, entries haven't been shifted since reordering vertices.
+             Intersection edge vertices are moved along their line. Intermediate ones are moved along the line between it and centre of circle (origin).
+    @param no_vertices Number of vertices
+    @param no_edges Number of edges
+    @param vertices Vertex coordinates (modified in-place)
+    @param edges Edge connectivity
+    @param circle_r Circle radius
+    @param intersection_edges Indices of intersection edges
+    @return [vertices,edges,vertices_for_centroid]
+    """
     vertices_for_centroid = numpy.copy(vertices)
     
     # Distance beyond circle_r which the vertices will be moved to
@@ -402,7 +458,7 @@ def shrink_outside_vertices(no_vertices,no_edges,vertices,edges,circle_r,interse
         D = edge_vertices[1,0]*edge_vertices[0,1]-edge_vertices[0,0]*edge_vertices[1,1]       
             
         ''' Old code for only moving the points inwards onto circle_combined_r, not out
-        # Reduce point distance, else do nothing
+        #Reduce point distance, else do nothing
         if (vertex_dist > circle_combined_r**2):
             #sqrt_term = math.sqrt( (circle_combined_r**2)*(dr**2)-D**2 )
             x_second_term = numpy.sign(dy)*dx*sqrt_term
@@ -460,8 +516,13 @@ def shrink_outside_vertices(no_vertices,no_edges,vertices,edges,circle_r,interse
                     
     return [vertices,edges,vertices_for_centroid]
 
-
 def find_line_with_centre(model,centre):
+    """
+    @brief Goes through lines and compares OCC COM to known stored centre to match IDs
+    @param model Gmsh model
+    @param centre 2D/3D centre to match
+    @return curve number found
+    """
     local_tol = 1.0e-0 / char_length
     total_curves = 0
     
@@ -492,6 +553,12 @@ def find_line_with_centre(model,centre):
     return curve_no
 
 def find_surf_with_centre(model,centre):
+    """
+    @brief As find_line_with_centre but for surfaces
+    @param model Gmsh model
+    @param centre Surface centre to match
+    @return surface number found
+    """
     local_tol = 1.0e-0 / char_length
     total_surfs = 0
     
@@ -522,11 +589,15 @@ def find_surf_with_centre(model,centre):
     return surf_no
 
 
-# Vertices define the (convex) polygon
-# Initial Voronoi cells created by placing {no_cells} points around the centroid
-# This works for a convex polytope
 def lloyds_algorithm(no_polygon_vertices,polygon_vertices,no_cells):
-    
+    """
+    @brief Vertices define the (convex) polygon. Initial Voronoi cells created by placing {no_cells} points around the centroid
+    @details This works for a convex polytope. Runs Lloyd's algorithm to generate centroidal Voronoi tessellation within polygon.
+    @param no_polygon_vertices Number of polygon vertices
+    @param polygon_vertices Polygon vertices array
+    @param no_cells Number of Voronoi cells/points
+    @return Voronoi object v
+    """
     err_tol = 1.0e-2
     err = 1.0e16
     iter_no = 1
@@ -540,7 +611,6 @@ def lloyds_algorithm(no_polygon_vertices,polygon_vertices,no_cells):
         if (dist < minimum_dist):
             minimum_dist = dist
     
-    #minimum_dist = minimum_dist / 2.0
     # Just need this to be small enough that ball around centroid is inside polygon
     min_dist = minimum_dist / numpy.random.randint(2,10)
     #voronoi_pts = uniform_points_on_circle(no_cells,min_dist,offset=2.0)
@@ -632,7 +702,18 @@ def lloyds_algorithm(no_polygon_vertices,polygon_vertices,no_cells):
 
 
 def create_oriented_box(model,z_lower_face_centre,x_orientation,y_orientation,z_orientation,xy_length,z_length,tag=None):
-    
+    """
+    @brief Create an oriented box (hexahedron-like) in OCC using given centre and orientation vectors.
+    @param model Gmsh model
+    @param z_lower_face_centre Centre of lower face (3-vector)
+    @param x_orientation X-axis unit vector
+    @param y_orientation Y-axis unit vector
+    @param z_orientation Z-axis unit vector
+    @param xy_length Length of square face
+    @param z_length Height of box
+    @param tag Optional tag for volume
+    @return model with added geometry
+    """
     curr_pt = model.occ.getMaxTag(0)+1
     curr_line = model.occ.getMaxTag(1)+1
     curr_lineloop = model.occ.getMaxTag(-1)+1
@@ -700,13 +781,25 @@ def create_oriented_box(model,z_lower_face_centre,x_orientation,y_orientation,z_
     return model
 
 def find_dist_from_plane(plane_point,plane_normal,space_point):
-
+    """
+    @brief Find signed distance from point to plane
+    @param plane_point A point on the plane
+    @param plane_normal Plane normal vector (assumed normalized)
+    @param space_point Point to measure distance from
+    @return Signed distance (float)
+    """
     dist = numpy.dot(plane_normal,space_point-plane_point)
 
     return dist
 
 def find_line_no_with_COM_closest_to_dist(model,fixed_dist,fixed_point):
-    
+    """
+    @brief Find line number with center-of-mass closest to given distance from fixed_point
+    @param model Gmsh model
+    @param fixed_dist Target distance
+    @param fixed_point Reference point
+    @return line number
+    """
     line_no_to_find = 0
     dist_away = 1.0e9
     
@@ -723,7 +816,13 @@ def find_line_no_with_COM_closest_to_dist(model,fixed_dist,fixed_point):
     return line_no_to_find
 
 def find_surf_no_with_COM_on_plane(model,plane_point,plane_normal):
-    
+    """
+    @brief Find a surface whose center-of-mass lies on given plane
+    @param model Gmsh model
+    @param plane_point A point on plane
+    @param plane_normal Plane normal vector
+    @return surface number
+    """
     no_surfs = 0
     surf_no_to_find = 0
     
@@ -745,7 +844,12 @@ def find_surf_no_with_COM_on_plane(model,plane_point,plane_normal):
 
 
 def find_lobule_no(point,lobules):
-    
+    """
+    @brief Find lobule index containing given point
+    @param point Query point
+    @param lobules List of lobule objects
+    @return lobule index or -1 if not found
+    """
     for lobule_no,lobule in enumerate(lobules):
         
         no_edges = lobule.no_edges
@@ -783,7 +887,12 @@ def find_lobule_no(point,lobules):
     return -1
 
 def find_cotyledon_no(point,cotyledons):
-    
+    """
+    @brief Find cotyledon index containing given point
+    @param point Query point
+    @param cotyledons List of cotyledon objects
+    @return cotyledon index or -1
+    """
     for cotyledon_no,cotyledon in enumerate(cotyledons):
         
         no_edges = cotyledon.no_edges
@@ -822,7 +931,13 @@ def find_cotyledon_no(point,cotyledons):
 
 
 def swap_2d_array_indices(size_of_first_axis,size_of_second_axis,array_in):
-    
+    """
+    @brief Swap 2D array indices (transpose-like) with bounds checks
+    @param size_of_first_axis Expected first axis size
+    @param size_of_second_axis Expected second axis size
+    @param array_in Input array
+    @return array_out Swapped array
+    """
     if (size_of_first_axis < 1 or size_of_second_axis < 1):
         print("ERROR: swap_2d_array_indicies")
         print("size_of_first_axis < 1 or size_of_second_axis < 1")
@@ -850,7 +965,13 @@ def swap_2d_array_indices(size_of_first_axis,size_of_second_axis,array_in):
 
 
 def quadratic_formula(a,b,c):
-    
+    """
+    @brief Solve quadratic equation ax^2 + bx + c = 0
+    @param a Coefficient a
+    @param b Coefficient b
+    @param c Coefficient c
+    @return [soln_p, soln_m]
+    """
     discriminant = b**2 - 4.0*a*c
     
     if (discriminant < 0):
@@ -864,9 +985,13 @@ def quadratic_formula(a,b,c):
     return [soln_p,soln_m]
 
 
-# This is essentially a helper function for getEntitiesInBoundingBox but using the BoundingBox class
-# Only to be used for cylinder faces, hence the check len(entities) == 1
 def get_face_in_bb(bounding_box):
+    """
+    @brief Helper to get face inside bounding box using Gmsh OCC getEntitiesInBoundingBox
+    @details Only to be used for cylinder faces, hence the check len(entities) == 1
+    @param bounding_box Bounding box with xmin,xmax,ymin,ymax,zmin,zmax
+    @return face_label Face tag
+    """
     face = gmsh.model.occ.getEntitiesInBoundingBox( \
         bounding_box.xmin, bounding_box.ymin, bounding_box.zmin, \
         bounding_box.xmax, bounding_box.ymax, bounding_box.zmax, dim=2)
@@ -884,6 +1009,12 @@ def get_face_in_bb(bounding_box):
     return face_label
 
 def normalise_vector(dim,vec):
+    """
+    @brief Normalise vector of given dimension
+    @param dim Dimension to normalise over
+    @param vec Vector array-like
+    @return Normalised vector (0 if norm below tol)
+    """
     tol = 1.0e-14
     
     norm_vec = numpy.copy(vec[0:dim])
@@ -898,14 +1029,21 @@ def normalise_vector(dim,vec):
     else:
         return norm_vec/sq_sum
 
-# Checks that currently only one volume exists in model    
 def check_unique_vol(model):
+    """
+    @brief Checks that currently only one volume exists in model
+    @param model Gmsh model
+    @raises ValueError if more than one volume exists
+    """
     vol_no = model.occ.getMaxTag(3)
     if (vol_no != 1):
         print(f"ERROR: check_unique_vol")
         raise ValueError(f"Error: number of volumes = {vol_no} when there should only be 1")
     
 def TEST_fuse(dim_1,tag_1,dim_2,tag_2):
+    """
+    @brief Simple wrapper to fuse two OCC entities (for testing)
+    """
     gmsh.model.occ.fuse([(dim_1,tag_1)],[(dim_2,tag_2)])
     return None
 
@@ -913,6 +1051,18 @@ def points_distribution_inner_random(circle_radius, \
                                      no_pts,no_pts_outer,no_pts_inner, \
                                      inner_radius_bound,outer_angle_offset=0.0, \
                                      outer_radius_offset=0.0,outer_angle_variance=0.0):
+    """
+    @brief Generate points with mixed outer-ring and inner-random distributions
+    @param circle_radius Outer circle radius
+    @param no_pts Total number of points
+    @param no_pts_outer Number of outer points
+    @param no_pts_inner Number of inner points
+    @param inner_radius_bound Inner radius bound
+    @param outer_angle_offset Angular offset for outer points
+    @param outer_radius_offset Radial offset for outer points
+    @param outer_angle_variance Angular variance for outer points
+    @return points_array (no_pts x 2)
+    """
     if (no_pts_outer+no_pts_inner != no_pts):
         print("ERROR: points_distribution_inner_random")
         print("outer+inner pts != no_pts")
@@ -955,7 +1105,11 @@ def points_distribution_inner_random(circle_radius, \
     return points_array
 
 def determine_max_nodes_from_cotyledons(cotyledon_list):
-    
+    """
+    @brief Determine maximum vertex count among cotyledons
+    @param cotyledon_list List of cotyledon objects
+    @return max_no_nodes
+    """
     max_no_nodes = 0
     
     for cell in cotyledon_list:
@@ -967,7 +1121,11 @@ def determine_max_nodes_from_cotyledons(cotyledon_list):
     return max_no_nodes
 
 def determine_max_edges_from_cotyledons(cotyledon_list):
-    
+    """
+    @brief Determine maximum edge count among cotyledons
+    @param cotyledon_list List of cotyledon objects
+    @return max_no_edges
+    """
     max_no_edges = 0
     
     for cell in cotyledon_list:
@@ -979,7 +1137,11 @@ def determine_max_edges_from_cotyledons(cotyledon_list):
     return max_no_edges
 
 def determine_largest_gmsh_vol(model):
-    
+    """
+    @brief Determine the largest Gmsh volume by mass
+    @param model Gmsh model
+    @return volume tag (int)
+    """
     volumes = model.occ.getEntities(dim=3)
     
     vols = numpy.array([model.occ.getMass(3,pair[1]) for pair in volumes])
@@ -992,10 +1154,16 @@ def determine_largest_gmsh_vol(model):
     
     return vol_no
 
-# Gets septal vein height using the two bounding spheres (lower placenta sphere, higher placentone removal sphere)
-# +/- buffer space of septal vein radius + 1.05*funnel_radius
-# Edge_dir goes from pt1 to pt2
 def calc_septal_vein_xy(wall_pt_1,wall_pt_2,edge_dir,ratio):
+    """
+    @brief Gets septal vein xy using two wall bounding points and ratio along edge
+    @details Uses buffer equal to septal_vein_radius + 1.2 * funnel_radius
+    @param wall_pt_1 First wall point (2D)
+    @param wall_pt_2 Second wall point (2D)
+    @param edge_dir Unit direction along edge from pt1->pt2
+    @param ratio Fraction along the available segment [0,1]
+    @return 2D point on wall
+    """
     buffer_on_wall = septal_vein_radius+1.2*septal_vein_funnel_radius
     
     twod_start_pt = numpy.copy(wall_pt_1) + buffer_on_wall*edge_dir
@@ -1005,12 +1173,15 @@ def calc_septal_vein_xy(wall_pt_1,wall_pt_2,edge_dir,ratio):
 
     return twod_pt
 
-
-# Gets septal vein height using the two bounding spheres (lower placenta sphere, higher placentone removal sphere)
-# +/- buffer space of septal vein radius + 1.05*funnel_radius
-# Then ratio calculates linear comb. height between those two points
 def calc_septal_vein_height(rel_hgt,xy_on_wall,xy_in_wall,ratio):
-
+    """
+    @brief Gets septal vein height using bounding sphere surfaces and buffers
+    @param rel_hgt Relative height to consider
+    @param xy_on_wall XY on wall
+    @param xy_in_wall XY inside wall
+    @param ratio Linear interpolation parameter [0,1]
+    @return height value
+    """
     sso = sphere_surface_eval(
             *xy_on_wall,initial_sphere_radius,0.0)
     ssi = sphere_surface_eval(
@@ -1047,11 +1218,15 @@ def calc_septal_vein_height(rel_hgt,xy_on_wall,xy_in_wall,ratio):
 
     return hgt
 
-# Gets septal vein height using the two bounding spheres (lower placenta sphere, higher placentone removal sphere)
-# +/- buffer space of septal vein radius + 1.05*funnel_radius
-# Then ratio calculates linear comb. height between those two points
 def calc_septal_vein_height_o(cotyledon_no,xy_on_wall,xy_in_wall,ratio):
-
+    """
+    @brief Variant of calc_septal_vein_height using cotyledon-specific removal sphere radius
+    @param cotyledon_no Index of cotyledon
+    @param xy_on_wall XY on wall
+    @param xy_in_wall XY inside wall
+    @param ratio Interpolation parameter
+    @return height value
+    """
     rsr_c = removal_sphere_radius(cotyledon_wall_heights[cotyledon_no])
     
     sse = sphere_surface_eval(
@@ -1097,7 +1272,17 @@ def calc_septal_vein_height_o(cotyledon_no,xy_on_wall,xy_in_wall,ratio):
 
 def readjust_vertices_for_wall_veins(cotyledon_no, \
         initial_vertex1,initial_vertex2,radius,edge_no,edge_set):
-
+    """
+    @brief Adjust vertices for wall veins so that outer vertex is placed just outside circle and height can hold vein
+    @details Uses bisection to move outer one along line - assumes only one of the two vertices is outside circle.
+    @param cotyledon_no Cotyledon index (unused)
+    @param initial_vertex1 First vertex (2D)
+    @param initial_vertex2 Second vertex (2D)
+    @param radius Circle radius
+    @param edge_no Edge number in edge_set
+    @param edge_set Edge set object with methods edge_length and calc_rel_height_along_edge
+    @return [vertex1, vertex2] adjusted vertices (2D)
+    """
     initial_length = edge_set.edge_length[edge_no]
     
     # Limitations of calculating rel_height outside radius
@@ -1122,6 +1307,9 @@ def readjust_vertices_for_wall_veins(cotyledon_no, \
     else:
         start_v = copy.deepcopy(initial_vertex1)
         end_v = copy.deepcopy(initial_vertex2)
+        
+    # initialise final_vertex
+    final_vertex = copy.deepcopy(start_v)
     
     while (iter < iter_limit):
         temp_v = copy.deepcopy(0.5*(start_v+end_v))
@@ -1138,12 +1326,10 @@ def readjust_vertices_for_wall_veins(cotyledon_no, \
             print("WARNING: readjust_vertices_for_wall_veins")
             print("Hit iteration limit in x-y point move")
             
-            
-            
-    #########################
-    ## Height root finding ##
-    #########################
-    
+    #####################################################
+    ## Height root finding via (slow) bisection method ##
+    #####################################################
+
     # v1 moving
     if (circ_eval(*initial_vertex1) >= radius_w_buffer**2):
         vertex1 = copy.deepcopy(final_vertex)
@@ -1167,7 +1353,6 @@ def readjust_vertices_for_wall_veins(cotyledon_no, \
             v_length(v)/initial_length
         temp_v = copy.deepcopy(vertex2)
         
-    
     iter = 0
     bisec_tol = 1.0e-3
     err = 1.0
@@ -1215,155 +1400,32 @@ def readjust_vertices_for_wall_veins(cotyledon_no, \
 def check_septal_vein_overlap_lobule_walls( \
     face_cyl_end_pt, lobule_node_set, \
         radius,fillet,thickness):
-
+    """
+    @brief Check if septal vein overlaps lobule walls
+    @param face_cyl_end_pt Endpoint of cylindrical face (3D)
+    @param lobule_node_set Node set for lobule
+    @param radius Septal vein radius
+    @param fillet Fillet radius
+    @param thickness Lobule wall thickness
+    @return True if overlap detected, else False
+    """
     for i in range(0,lobule_node_set.no_nodes):
         if (abs(face_cyl_end_pt[2] - lobule_node_set.nodal_wall_height[i]) > \
                 radius + fillet):
             continue
         elif (numpy.linalg.norm(lobule_node_set.node[i,0:2] - face_cyl_end_pt[0:2]) < \
                 radius + fillet + thickness):
-            print(f"OVERLAP: check_septal_doesnt_overlap_lobule_walls")
+            print(f"OVERLAP: check_septal_overlap_lobule_walls")
             print(f"lobule wall overlaps with septal vein")
             print(f"lobule wall pt: {lobule_node_set.node[i,0:2]}")
             print(f"septal vein pt: {face_cyl_end_pt[0:2]}")
             return True
     return False
 
-def readjust_vertices_for_wall_veins_o2(cotyledon_no,vertex1,vertex2,radius,edge_no,edge_set):
-
-    initial_length = edge_set.edge_length[edge_no]
-
-    wall_height = lambda ratio : \
-        edge_set.calc_rel_height_along_edge(edge_no,ratio)
-        
-    v_length = lambda v1,v2 : \
-        numpy.linalg.norm(copy.deepcopy(vertex2-vertex1))
-
-    # Make sure vertex1 is the one inside circle
-    if (circ_eval(*vertex1) < radius and circ_eval(*vertex2) < radius):
-        return [vertex1,vertex2]
-    elif (circ_eval(*vertex1) >= radius):
-        temp_v = copy.deepcopy(vertex1)
-        vertex1 = copy.deepcopy(vertex2)
-        vertex2 = copy.deepcopy(temp_v)
-    
-    iter = 0
-    iter_limit = 200
-    bisec_tol = 1.0e-1
-    start_v = copy.deepcopy(vertex1)
-    end_v = copy.deepcopy(vertex2)
-    
-    while (iter < iter_limit):
-        temp_v = copy.deepcopy(0.5*(start_v+end_v))
-        if (circ_eval(*temp_v) - radius > bisec_tol):
-            end_v = temp_v
-        elif (circ_eval(*temp_v) - radius < -bisec_tol):
-            start_v = temp_v
-        else:
-            vertex2 = copy.deepcopy(temp_v)
-            break
-        iter = iter+1
-        if (iter == iter_limit):
-            print("WARNING: readjust_vertices_for_wall_veins")
-            print("Hit iteration limit in x-y point move")
-    
-    iter = 0
-    bisec_tol = 1.0e-3
-    err = 1.0
-    start_v = copy.deepcopy(vertex1)
-    end_v = copy.deepcopy(vertex2)
-    length = v_length(vertex1,vertex2)
-    ratio = length/initial_length
-    # This says that the end point of the wall is less than can hold vein on so want to find a point s.t. the endpoint is just tall enough to hold a vein
-    if (wall_height(ratio) - wall_vein_buffer_on_wall < -bisec_tol):
-        while (iter < iter_limit):
-            temp_v = copy.deepcopy(0.5*(start_v+end_v))
-            length = v_length(vertex1,temp_v)
-            ratio = length/initial_length
-            if (wall_height(ratio) - wall_vein_buffer_on_wall > bisec_tol):
-                start_v = temp_v
-            elif (wall_height(ratio) - wall_vein_buffer_on_wall < -bisec_tol):
-               end_v = temp_v
-            else:
-                vertex2 = copy.deepcopy(temp_v)
-                break
-            iter = iter+1
-            if (iter == iter_limit):
-                print("WARNING: readjust_vertices_for_wall_veins")
-                print("Hit iteration limit in z point move")
-            
-    # Buffer
-    vertex2 = copy.deepcopy(vertex1 + 0.8*(vertex2-vertex1))
-    
-    return [vertex1,vertex2]
-
-def readjust_vertices_for_wall_veins_o(cotyledon_no,vertex1,vertex2,radius):
-    
-    rsr_c = removal_sphere_radius(cotyledon_wall_heights[cotyledon_no])
-    
-    circ_eval = lambda v : math.sqrt(v[0]**2 + v[1]**2)
-    wall_height = lambda v : \
-        sphere_surface_eval(
-            *v,rsr_c,cotyledon_wall_heights[cotyledon_no]) \
-        -sphere_surface_eval(
-            *v,initial_sphere_radius,0.0) \
-
-    # Make sure vertex1 is the one inside circle
-    if (circ_eval(vertex1) < radius and circ_eval(vertex2) < radius):
-        return [vertex1,vertex2]
-    elif (circ_eval(vertex1) >= radius):
-        temp_v = copy.deepcopy(vertex1)
-        vertex1 = copy.deepcopy(vertex2)
-        vertex2 = copy.deepcopy(temp_v)
-    
-    iter = 0
-    iter_limit = 200
-    bisec_tol = 1.0e-1
-    start_v = copy.deepcopy(vertex1)
-    end_v = copy.deepcopy(vertex2)
-    
-    while (iter < iter_limit):
-        temp_v = copy.deepcopy(0.5*(start_v+end_v))
-        if (circ_eval(temp_v) - radius > bisec_tol):
-            end_v = temp_v
-        elif (circ_eval(temp_v) - radius < -bisec_tol):
-            start_v = temp_v
-        else:
-            vertex2 = copy.deepcopy(temp_v)
-            break
-        iter = iter+1
-        if (iter == iter_limit):
-            print("WARNING: readjust_vertices_for_wall_veins")
-            print("Hit iteration limit in x-y point move")
-    
-    iter = 0
-    bisec_tol = 1.0e-3
-    err = 1.0
-    start_v = copy.deepcopy(vertex1)
-    end_v = copy.deepcopy(vertex2)
-    # This says that the end point of the wall is less than can hold vein on so want to find a point s.t. the endpoint is just tall enough to hold a vein
-    if (wall_height(end_v) - wall_vein_buffer_on_wall < -bisec_tol):
-        while (iter < iter_limit):
-            temp_v = copy.deepcopy(0.5*(start_v+end_v))
-            if (wall_height(temp_v) - wall_vein_buffer_on_wall > bisec_tol):
-                start_v = temp_v
-            elif (wall_height(temp_v) - wall_vein_buffer_on_wall < -bisec_tol):
-               end_v = temp_v
-            else:
-                vertex2 = copy.deepcopy(temp_v)
-                break
-            iter = iter+1
-            if (iter == iter_limit):
-                print("WARNING: readjust_vertices_for_wall_veins")
-                print("Hit iteration limit in z point move")
-            
-    # Buffer
-    vertex2 = copy.deepcopy(vertex1 + 0.8*(vertex2-vertex1))
-    
-    return [vertex1,vertex2]
-
-def debug_add_lines_from_edge_set(model,edge_no,edge_set,wall_thickness) -> int:
-    
+def debug_add_lines_from_edge_set(model,edge_no,edge_set,wall_thickness):
+    """
+    @brief Debug helper to add lines from edge set for visualization
+    """
     curr_pt = model.occ.getMaxTag(0)
     
     vertex_set = edge_set.node_set
@@ -1381,8 +1443,10 @@ def debug_add_lines_from_edge_set(model,edge_no,edge_set,wall_thickness) -> int:
     
     return None
 
-def debug_add_base_wall_from_edge(model,edge_no,edge_set,wall_thickness) -> int:
-    
+def debug_add_base_wall_from_edge(model,edge_no,edge_set,wall_thickness):
+    """
+    @brief Debug helper to add base wall from edge (creates rectangle in XY plane)
+    """
     curr_pt = model.occ.getMaxTag(0)
     
     h_w_t = wall_thickness / 2.0
@@ -1415,7 +1479,16 @@ def debug_add_base_wall_from_edge(model,edge_no,edge_set,wall_thickness) -> int:
 
 def create_piecewise_linear_wall_from_pts(model,v0,v1,v0_h,v1_h, \
         normal_dir,wall_thickness):
-    
+    """
+    @brief Part of setting up septal walls - create piecewise linear wall from two points and heights
+    @param model Gmsh model
+    @param v0 Start vertex (2D)
+    @param v1 End vertex (2D)
+    @param v0_h Height at v0
+    @param v1_h Height at v1
+    @param normal_dir Normal direction vector (2D)
+    @param wall_thickness Thickness of wall
+    """
     face_pt = numpy.empty(2,dtype = int) # Track z-, z+ face pts
     face_line = numpy.empty(4,dtype = int) # Track z-, z+ face pts
     face_ll = numpy.empty(6,dtype = int) # Track z-, z+ face pts
@@ -1519,7 +1592,13 @@ def create_piecewise_linear_wall_from_pts(model,v0,v1,v0_h,v1_h, \
     return None
 
 def add_wall_from_edge_with_joint(model,edge_no,edge_set,wall_thickness) -> None:
-    
+    """
+    @brief Part of setting up septal walls with an additional structure at the cell vertices
+    @param model Gmsh model
+    @param edge_no Edge number
+    @param edge_set Edge set object
+    @param wall_thickness Wall thickness
+    """
     vertex_set = edge_set.node_set
     v_nos = copy.deepcopy(edge_set.edge[edge_no,:])
     v0 = vertex_set.node[v_nos[0],:]
@@ -1547,9 +1626,14 @@ def add_wall_from_edge_with_joint(model,edge_no,edge_set,wall_thickness) -> None
         
     return None
 
-
 def add_wall_from_edge(model,edge_no,edge_set,wall_thickness) -> None:
-    
+    """
+    @brief Part of setting up septal walls (no joint) - creates wall volume along an edge
+    @param model Gmsh model
+    @param edge_no Edge number
+    @param edge_set Edge set object
+    @param wall_thickness Wall thickness
+    """
     face_pt = numpy.empty(2,dtype = int) # Track z-, z+ face pts
     face_line = numpy.empty(4,dtype = int) # Track z-, z+ face pts
     face_ll = numpy.empty(6,dtype = int) # Track z-, z+ face pts
@@ -1662,7 +1746,13 @@ def add_wall_from_edge(model,edge_no,edge_set,wall_thickness) -> None:
     return None
 
 def add_joint_from_node(model,node_no,node_set,wall_thickness) -> None:
-    
+    """
+    @brief Only sets up the joint structure at the cell vertices
+    @param model Gmsh model
+    @param node_no Node number
+    @param node_set Node set object
+    @param wall_thickness Wall thickness
+    """
     curr_vol = model.occ.getMaxTag(3)
     
     v_loc = copy.deepcopy(node_set.node[node_no,:])
@@ -1681,29 +1771,48 @@ def add_joint_from_node(model,node_no,node_set,wall_thickness) -> None:
     return None
     
 def points_near(pt1,pt2):
+    """
+    @brief Check if two points are near each other within num_err tolerance
+    @param pt1 First point
+    @param pt2 Second point
+    @return True if distance <= num_err, else False
+    """
     err = numpy.linalg.norm(pt1[:]-pt2[:])
     if (err <= num_err):
         return True
     else:
         return False
     
-# Height of spherical cap bottom surface relative to z = 0
 def calc_sphere_height_at_xy(xy_pt):
-    
+    """
+    @brief Height of spherical cap bottom surface relative to z = 0
+    @param xy_pt 2D point
+    @return height value
+    """
     return sphere_surface_eval(*xy_pt,initial_sphere_radius,0.0)
 
-# Height of interior z distance
 def calc_sphere_interior_height_at_xy(xy_pt):
-    
+    """
+    @brief Height of interior z distance
+    @param xy_pt 2D point
+    @return interior height (placenta_height - sphere height)
+    """
     return (placenta_height - calc_sphere_height_at_xy(xy_pt))
 
-# Height of interior z distance
 def calc_sphere_interior_height_frac_at_xy(xy_pt):
-    
+    """
+    @brief Fractional interior height at xy relative to placenta_height
+    @param xy_pt 2D point
+    @return Fraction between 0 and 1
+    """
     return (1.0 - calc_sphere_height_at_xy(xy_pt)/placenta_height)
 
 def convert_float_to_gmsh_field_str(value: float) -> str:
-    
+    """
+    @brief Convert float to string suitable for gmsh field expressions, parenthesise negative values
+    @param value Float value
+    @return String
+    """
     if (value<0.0):
         value = f"({value})"
     else:
@@ -1711,7 +1820,11 @@ def convert_float_to_gmsh_field_str(value: float) -> str:
     return value
 
 def replace_multiple_signs_in_str(old_str):
-    
+    """
+    @brief Replace multiple signs in a string when passing to Gmsh field expressions
+    @param old_str Input string
+    @return Cleaned string
+    """
     new_str = old_str.replace("++","+")
     new_str = new_str.replace("+-","-")
     new_str = new_str.replace("-+","-")
