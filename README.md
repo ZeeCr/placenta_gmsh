@@ -23,17 +23,17 @@ This work was funded by Wellcome Leap as part of the SWIRL (Stillbirth When Risk
 
 ## Examples
 
-### Top-down Interior and Bottom Exterior Surface View
+### Top-down Interior and Bottom Exterior Surface View of a Geometry
 
-<img src="https://github.com/user-attachments/assets/ee60bad4-48e8-417b-87aa-09c952794630" alt="View 1" width="480" />
+<img src="https://github.com/user-attachments/assets/ee60bad4-48e8-417b-87aa-09c952794630" alt="View 1" width="360" />
 
-<img src="https://github.com/user-attachments/assets/c7cfb92c-c5ca-4680-bddd-9e500ecc1afd" alt="View 2" width="480" />
+<img src="https://github.com/user-attachments/assets/c7cfb92c-c5ca-4680-bddd-9e500ecc1afd" alt="View 2" width="360" />
 
-### Schematic Visualisations
+### Schematic Visualisations of Two Geometries
 
-<img src="https://github.com/user-attachments/assets/573ee47a-6339-48e1-832d-3a23d9d1a3e4" alt="Schematic 1" width="480" />
+<img src="https://github.com/user-attachments/assets/573ee47a-6339-48e1-832d-3a23d9d1a3e4" alt="Schematic 1" width="360" />
 
-<img src="https://github.com/user-attachments/assets/2e4a34d3-415b-4fb4-bc04-ea7c29c29db0" alt="Schematic 2" width="480" />
+<img src="https://github.com/user-attachments/assets/2e4a34d3-415b-4fb4-bc04-ea7c29c29db0" alt="Schematic 2" width="360" />
 
 ### Surface Mesh
 
