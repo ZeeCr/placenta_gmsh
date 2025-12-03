@@ -496,7 +496,7 @@ def main():
             +f"{no_inlets}," \
             +f"{cotyledon_node_set.calc_avg_rel_wall_height_within_cutoff(placenta_radius)}"
     with open('all_geom_info.csv', 'a') as file:
-        file.write(f"\n{store.read_idx()},{placenta_id},{geom_info_str}")
+        file.write(f"\n{meshIDX},{placenta_id},{geom_info_str}")
         file.close()
     with open("geom_info.csv","w") as store_geom:
         store_geom.write(geom_info_header)
