@@ -1038,7 +1038,8 @@ def check_unique_vol(model):
     vol_no = model.occ.getMaxTag(3)
     if (vol_no != 1):
         print(f"ERROR: check_unique_vol")
-        raise ValueError(f"Error: number of volumes = {vol_no} when there should only be 1")
+        # raise ValueError(f"Error: number of volumes = {vol_no} when there should only be 1")
+        sys.exit(-1)
     
 def TEST_fuse(dim_1,tag_1,dim_2,tag_2):
     """
