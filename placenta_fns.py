@@ -1038,8 +1038,8 @@ def check_unique_vol(model):
     vol_no = model.occ.getMaxTag(3)
     if (vol_no != 1):
         print(f"ERROR: check_unique_vol")
-        # raise ValueError(f"Error: number of volumes = {vol_no} when there should only be 1")
-        sys.exit(-1)
+        raise ValueError(f"Error: number of volumes = {vol_no} when there should only be 1")
+        # sys.exit(-1)
     
 def TEST_fuse(dim_1,tag_1,dim_2,tag_2):
     """
@@ -1199,12 +1199,13 @@ def calc_septal_vein_height(rel_hgt,xy_on_wall,xy_in_wall,ratio):
         print(f"ERROR: calc_septal_vein_height")
         print("btm_hgt > top_hgt")
         print(f"btm_hgt = {btm_hgt}, top_hgt = {top_hgt}")
-        gmsh.model.occ.addPoint(*xy_on_wall,btm_hgt,meshSize=1.0)
-        gmsh.model.occ.addPoint(*xy_on_wall,top_hgt,meshSize=1.0)
-        gmsh.model.occ.synchronize()
-        gmsh.fltk.run()
-        gmsh.finalize()
-        sys.exit(-1)
+        # gmsh.model.occ.addPoint(*xy_on_wall,btm_hgt,meshSize=1.0)
+        # gmsh.model.occ.addPoint(*xy_on_wall,top_hgt,meshSize=1.0)
+        # gmsh.model.occ.synchronize()
+        # gmsh.fltk.run()
+        # gmsh.finalize()
+        raise ValueError(f"Error: calc_septal_vein_height: btm_hgt > top_hgt")
+        # sys.exit(-1)
         
     hgt = (1.0-ratio)*btm_hgt + ratio*top_hgt
     
@@ -1249,12 +1250,13 @@ def calc_septal_vein_height_o(cotyledon_no,xy_on_wall,xy_in_wall,ratio):
         print(f"ERROR: calc_septal_vein_height")
         print("btm_hgt > top_hgt")
         print(f"btm_hgt = {btm_hgt}, top_hgt = {top_hgt}")
-        gmsh.model.occ.addPoint(*xy_on_wall,btm_hgt,meshSize=1.0)
-        gmsh.model.occ.addPoint(*xy_on_wall,top_hgt,meshSize=1.0)
-        gmsh.model.occ.synchronize()
-        gmsh.fltk.run()
-        gmsh.finalize()
-        sys.exit(-1)
+        # gmsh.model.occ.addPoint(*xy_on_wall,btm_hgt,meshSize=1.0)
+        # gmsh.model.occ.addPoint(*xy_on_wall,top_hgt,meshSize=1.0)
+        # gmsh.model.occ.synchronize()
+        # gmsh.fltk.run()
+        # gmsh.finalize()
+        raise ValueError(f"Error: calc_septal_vein_height_o: btm_hgt > top_hgt")
+        # sys.exit(-1)
         
     hgt = (1.0-ratio)*btm_hgt + ratio*top_hgt
     

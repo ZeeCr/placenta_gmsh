@@ -9,6 +9,6 @@ mesh_success = False
 while not mesh_success:
     try:
         mesh_success = pm.main()
-    except (Exception, AttributeError) as e:
+    except (Exception, AttributeError, ValueError) as e:
         print(f"Error occurred somewhere: {e}")
         mesh_success = False
